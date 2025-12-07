@@ -4,76 +4,116 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Profile from "./pages/Profile";
+import Layout from "./components/layout/Layout";
 
 function PrivateRoute({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return user ? children : <Navigate to="/login" />;
+}
+
+function PublicRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return !user ? children : <Navigate to="/dashboard" />;
 }
 
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-50">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+        <Routes>
+          {/* Public Routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
 
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            }
+          />
 
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
+          {/* Private Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
 
-            <Route
-              path="/projects"
-              element={
-                <PrivateRoute>
-                  <Layout>
-                    <Projects />
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
+          <Route
+            path="/projects"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Projects />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
 
-            <Route
-              path="/projects/:id"
-              element={
-                <PrivateRoute>
-                  <Layout>
-                    <ProjectDetail />
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
+          <Route
+            path="/projects/:id"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <ProjectDetail />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
 
-            <Route
-              path="/profile"
-              element={
-                <PrivateRoute>
-                  <Layout>
-                    <Profile />
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
-          </Routes>
-        </div>
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Profile />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Redirects */}
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
+        </Routes>
       </AuthProvider>
     </Router>
   );

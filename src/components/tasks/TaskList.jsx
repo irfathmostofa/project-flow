@@ -8,32 +8,36 @@ import {
   Edit,
   Trash2,
   Plus,
+  Filter,
 } from "lucide-react";
 import { format } from "date-fns";
 import TaskForm from "./TaskForm";
+import TaskCard from "./TaskCard";
+import Modal from "../ui/Modal";
 
 export default function TaskList({ projectId, milestoneId }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [filters, setFilters] = useState({
+    status: "",
+    priority: "",
+    sortBy: "newest",
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchTasks();
-  }, [projectId, milestoneId]);
+  }, [projectId, milestoneId, filters]);
 
   const fetchTasks = async () => {
     try {
-      let query = supabase
-        .from("tasks")
-        .select(
-          `
+      let query = supabase.from("tasks").select(`
           *,
           assignee:users(full_name, email),
           milestone:milestones(name)
-        `
-        )
-        .order("created_at", { ascending: false });
+        `);
 
       if (projectId) {
         query = query.eq("project_id", projectId);
@@ -41,6 +45,30 @@ export default function TaskList({ projectId, milestoneId }) {
 
       if (milestoneId) {
         query = query.eq("milestone_id", milestoneId);
+      }
+
+      // Apply filters
+      if (filters.status) {
+        query = query.eq("status", filters.status);
+      }
+
+      if (filters.priority) {
+        query = query.eq("priority", filters.priority);
+      }
+
+      // Apply sorting
+      switch (filters.sortBy) {
+        case "newest":
+          query = query.order("created_at", { ascending: false });
+          break;
+        case "oldest":
+          query = query.order("created_at", { ascending: true });
+          break;
+        case "deadline":
+          query = query.order("deadline", { ascending: true });
+          break;
+        default:
+          query = query.order("created_at", { ascending: false });
       }
 
       const { data, error } = await query;
@@ -90,166 +118,262 @@ export default function TaskList({ projectId, milestoneId }) {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "in-progress":
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      case "review":
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-      default:
-        return <Circle className="h-5 w-5 text-gray-400" />;
-    }
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTask(null);
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "urgent":
-        return "bg-red-100 text-red-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-green-100 text-green-800";
-    }
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      status: "",
+      priority: "",
+      sortBy: "newest",
+    });
   };
 
   if (loading) {
-    return <div className="text-center py-4">Loading tasks...</div>;
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading tasks...</p>
+      </div>
+    );
   }
+
+  // Group tasks by status for better organization
+  const groupedTasks = {
+    todo: tasks.filter((t) => t.status === "todo"),
+    "in-progress": tasks.filter((t) => t.status === "in-progress"),
+    review: tasks.filter((t) => t.status === "review"),
+    completed: tasks.filter((t) => t.status === "completed"),
+  };
+
+  const statusConfig = {
+    todo: { title: "To Do", icon: Circle, color: "bg-gray-100 text-gray-800" },
+    "in-progress": {
+      title: "In Progress",
+      icon: Clock,
+      color: "bg-blue-100 text-blue-800",
+    },
+    review: {
+      title: "Review",
+      icon: AlertCircle,
+      color: "bg-yellow-100 text-yellow-800",
+    },
+    completed: {
+      title: "Completed",
+      icon: CheckCircle,
+      color: "bg-green-100 text-green-800",
+    },
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Task
-        </button>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
+          <p className="text-sm text-gray-600">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="btn-secondary py-2 text-sm flex items-center"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </button>
+
+          {/* New Task Button */}
+          <button
+            onClick={() => {
+              setEditingTask(null);
+              setIsModalOpen(true);
+            }}
+            className="btn-primary py-2 text-sm flex items-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </button>
+        </div>
       </div>
 
-      {(showForm || editingTask) && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <TaskForm
-            projectId={projectId}
-            milestoneId={milestoneId}
-            initialData={editingTask}
-            onSuccess={() => {
-              setShowForm(false);
-              setEditingTask(null);
-              fetchTasks();
-            }}
-          />
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="card">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="input text-sm"
+              >
+                <option value="">All Status</option>
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="review">Review</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Priority
+              </label>
+              <select
+                value={filters.priority}
+                onChange={(e) => handleFilterChange("priority", e.target.value)}
+                className="input text-sm"
+              >
+                <option value="">All Priorities</option>
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sort By
+              </label>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+                className="input text-sm"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="deadline">Deadline</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-3 flex justify-end space-x-2">
+              <button
+                onClick={clearFilters}
+                className="btn-secondary py-2 text-sm"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        {tasks.map((task) => (
-          <div key={task.id} className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
-                <button
-                  onClick={() =>
-                    updateTaskStatus(
-                      task.id,
-                      task.status === "completed" ? "todo" : "completed"
-                    )
-                  }
-                  className="mt-1"
-                >
-                  {getStatusIcon(task.status)}
-                </button>
+      {/* Task Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingTask ? "Edit Task" : "Create New Task"}
+        size="lg"
+      >
+        <TaskForm
+          projectId={projectId}
+          milestoneId={milestoneId}
+          initialData={editingTask}
+          onSuccess={() => {
+            handleCloseModal();
+            fetchTasks();
+          }}
+        />
+      </Modal>
 
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <h4
-                      className={`font-medium ${
-                        task.status === "completed"
-                          ? "line-through text-gray-500"
-                          : "text-gray-900"
-                      }`}
-                    >
-                      {task.title}
-                    </h4>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(
-                        task.priority
-                      )}`}
-                    >
-                      {task.priority}
-                    </span>
-                    {task.milestone && (
-                      <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full">
-                        {task.milestone.name}
-                      </span>
-                    )}
-                  </div>
-
-                  {task.description && (
-                    <p className="text-gray-600 text-sm mt-1">
-                      {task.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                    {task.assignee && (
-                      <span>
-                        Assigned to:{" "}
-                        {task.assignee.full_name || task.assignee.email}
-                      </span>
-                    )}
-                    {task.deadline && (
-                      <span>
-                        Due: {format(new Date(task.deadline), "MMM d, yyyy")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setEditingTask(task)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <Edit className="h-4 w-4 text-gray-500" />
-                </button>
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <div className="flex space-x-4">
-                {["todo", "in-progress", "review", "completed"].map(
-                  (status) => (
-                    <button
-                      key={status}
-                      onClick={() => updateTaskStatus(task.id, status)}
-                      className={`text-xs px-3 py-1 rounded-full capitalize ${
-                        task.status === status
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {status.replace("-", " ")}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
+      {/* Tasks Grid */}
+      {tasks.length === 0 ? (
+        <div className="card text-center py-12">
+          <div className="mx-auto">
+            <h4 className="text-lg font-medium text-gray-900 mb-1">
+              No tasks yet
+            </h4>
+            <p className="text-gray-500 mb-4">
+              Add your first task to get started
+            </p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+          {Object.entries(groupedTasks).map(([status, statusTasks]) => {
+            const config = statusConfig[status];
+            const Icon = config.icon;
+
+            return (
+              <div key={status} className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Icon className="h-5 w-5 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">
+                      {config.title}
+                    </h4>
+                  </div>
+                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                    {statusTasks.length}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {statusTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      compact={true}
+                      onEdit={() => {
+                        setEditingTask(task);
+                        setIsModalOpen(true);
+                      }}
+                      onDelete={deleteTask}
+                      onStatusChange={updateTaskStatus}
+                    />
+                  ))}
+
+                  {statusTasks.length === 0 && (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No tasks
+                    </div>
+                  )}
+                </div>
+
+                {/* Add task to this status */}
+                <button
+                  onClick={() => {
+                    setEditingTask(null);
+                    setIsModalOpen(true);
+                  }}
+                  className="w-full mt-4 p-2 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-400 text-sm"
+                >
+                  <Plus className="h-4 w-4 inline mr-1" />
+                  Add task
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mobile Floating Button */}
+      <button
+        onClick={() => {
+          setEditingTask(null);
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-6 right-6 sm:hidden h-14 w-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 z-40"
+        aria-label="Add Task"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 }

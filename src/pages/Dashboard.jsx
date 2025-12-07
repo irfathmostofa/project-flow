@@ -152,29 +152,36 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          Dashboard
+        </h1>
+        <p className="text-gray-600 mt-1 sm:mt-2">
           Welcome back! Here's what's happening with your projects.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {statCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className={`${stat.bgColor} rounded-xl p-6`}>
+            <div
+              key={index}
+              className={`${stat.bgColor} rounded-xl p-3 sm:p-4 col-span-1`}
+            >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">
                     {stat.title}
                   </p>
-                  <p className={`text-2xl font-bold ${stat.textColor} mt-2`}>
+                  <p
+                    className={`text-lg sm:text-xl font-bold ${stat.textColor} mt-1 sm:mt-2`}
+                  >
                     {stat.value}
                   </p>
                 </div>
-                <div className={`${stat.color} p-3 rounded-lg`}>
-                  <Icon className="h-6 w-6 text-white" />
+                <div className={`${stat.color} p-2 sm:p-3 rounded-lg`}>
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
               </div>
             </div>
@@ -182,11 +189,11 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Projects */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="card">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               Recent Projects
             </h2>
             <Link
@@ -197,14 +204,14 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {recentProjects.length === 0 ? (
-              <div className="text-center py-8">
-                <FolderKanban className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <div className="text-center py-6 sm:py-8">
+                <FolderKanban className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500">No projects yet</p>
                 <Link
                   to="/projects"
-                  className="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium"
+                  className="inline-block mt-3 text-blue-600 hover:text-blue-800 font-medium text-sm"
                 >
                   Create your first project
                 </Link>
@@ -214,14 +221,14 @@ export default function Dashboard() {
                 <Link
                   key={project.id}
                   to={`/projects/${project.id}`}
-                  className="block p-4 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
+                  className="block p-3 sm:p-4 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">
                         {project.name}
                       </h3>
-                      <div className="flex items-center space-x-3 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${
                             project.status === "active"
@@ -241,10 +248,8 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">
-                        Created {format(new Date(project.created_at), "MMM d")}
-                      </div>
+                    <div className="text-sm text-gray-500 text-right">
+                      Created {format(new Date(project.created_at), "MMM d")}
                     </div>
                   </div>
                 </Link>
@@ -254,36 +259,36 @@ export default function Dashboard() {
         </div>
 
         {/* Upcoming Deadlines */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="card">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               Upcoming Deadlines
             </h2>
             <span className="text-sm text-gray-500">Next 7 days</span>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {upcomingDeadlines.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <div className="text-center py-6 sm:py-8">
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500">No upcoming deadlines</p>
               </div>
             ) : (
               upcomingDeadlines.map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 border border-gray-200 rounded-lg"
+                  className="p-3 sm:p-4 border border-gray-200 rounded-lg"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">
                         {task.title}
                       </h3>
-                      <div className="flex items-center space-x-3 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
                           {task.priority}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 truncate">
                           Project: {task.project?.name || "Unknown"}
                         </span>
                       </div>
@@ -292,7 +297,9 @@ export default function Dashboard() {
                       <div className="text-sm font-medium text-gray-900">
                         {format(new Date(task.deadline), "MMM d")}
                       </div>
-                      <div className="text-xs text-gray-500">{task.status}</div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {task.status}
+                      </div>
                     </div>
                   </div>
 
@@ -307,24 +314,24 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <Link
                 to="/projects"
-                className="flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                className="flex items-center justify-center p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm"
               >
-                <FolderKanban className="h-5 w-5 mr-2" />
-                New Project
+                <FolderKanban className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">New Project</span>
               </Link>
               <Link
                 to="/projects"
-                className="flex items-center justify-center p-4 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                className="flex items-center justify-center p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm"
               >
-                <Target className="h-5 w-5 mr-2" />
-                View Tasks
+                <Target className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">View Tasks</span>
               </Link>
             </div>
           </div>

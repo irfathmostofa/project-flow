@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
-import { User, Mail, Calendar, Edit, Save, X } from "lucide-react";
+import { User, Mail, Calendar, Edit, Save, X, Key, Shield } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Profile() {
@@ -64,7 +64,6 @@ export default function Profile() {
       setEditing(false);
       setSuccess("Profile updated successfully!");
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
       setError(error.message);
@@ -94,8 +93,10 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          Profile
+        </h1>
+        <p className="text-gray-600 mt-1 sm:mt-2">
           Manage your account information and settings
         </p>
       </div>
@@ -112,12 +113,12 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      <div className="card">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4">
-              <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center">
+              <div className="h-16 w-16 sm:h-20 sm:w-20 bg-white rounded-full flex items-center justify-center">
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
@@ -125,11 +126,11 @@ export default function Profile() {
                     className="h-full w-full rounded-full object-cover"
                   />
                 ) : (
-                  <User className="h-10 w-10 text-blue-600" />
+                  <User className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600" />
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">
                   {profile?.full_name || user.email}
                 </h2>
                 <p className="text-blue-100 flex items-center mt-1">
@@ -142,7 +143,7 @@ export default function Profile() {
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                className="flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Profile
@@ -151,8 +152,8 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Profile Form */}
-        <div className="p-8">
+        {/* Profile Form/Info */}
+        <div className="p-4 sm:p-6 lg:p-8">
           {editing ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -165,7 +166,7 @@ export default function Profile() {
                     name="full_name"
                     value={formData.full_name}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="input"
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -179,13 +180,13 @@ export default function Profile() {
                     name="avatar_url"
                     value={formData.avatar_url}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="input"
                     placeholder="https://example.com/avatar.jpg"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -195,17 +196,13 @@ export default function Profile() {
                       avatar_url: profile.avatar_url || "",
                     });
                   }}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="btn-secondary"
                   disabled={saving}
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button type="submit" disabled={saving} className="btn-primary">
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -258,12 +255,15 @@ export default function Profile() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">Email Verified</span>
+                    <span className="text-gray-700 flex items-center">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Email Verified
+                    </span>
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${
                         user.email_confirmed_at
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
+                          ? "badge-success"
+                          : "badge-warning"
                       }`}
                     >
                       {user.email_confirmed_at ? "Verified" : "Not Verified"}
@@ -271,8 +271,11 @@ export default function Profile() {
                   </div>
 
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">Last Sign In</span>
-                    <span className="text-gray-900">
+                    <span className="text-gray-700 flex items-center">
+                      <Key className="h-4 w-4 mr-2" />
+                      Last Sign In
+                    </span>
+                    <span className="text-gray-900 text-sm">
                       {user.last_sign_in_at
                         ? format(
                             new Date(user.last_sign_in_at),
@@ -289,11 +292,11 @@ export default function Profile() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-white rounded-xl shadow p-8">
+      <div className="card">
         <h3 className="text-lg font-medium text-red-600 mb-4">Danger Zone</h3>
         <div className="space-y-4">
           <div className="p-4 border border-red-200 rounded-lg">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
               <div>
                 <h4 className="font-medium text-gray-900">Delete Account</h4>
                 <p className="text-sm text-gray-600 mt-1">
@@ -308,13 +311,12 @@ export default function Profile() {
                       "Are you sure you want to delete your account? This action cannot be undone."
                     )
                   ) {
-                    // Implement account deletion
                     alert(
                       "Account deletion would be implemented here. This requires additional Supabase setup."
                     );
                   }
                 }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="btn-danger"
               >
                 Delete Account
               </button>
