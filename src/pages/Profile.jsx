@@ -115,7 +115,7 @@ export default function Profile() {
 
       <div className="card">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 sm:p-8">
+        <div className="bg-linear-to-r from-blue-600 to-blue-700 p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4">
               <div className="h-16 w-16 sm:h-20 sm:w-20 bg-white rounded-full flex items-center justify-center">
