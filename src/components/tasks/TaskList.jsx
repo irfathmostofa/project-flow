@@ -5,12 +5,11 @@ import {
   Circle,
   Clock,
   AlertCircle,
-  Edit,
-  Trash2,
   Plus,
   Filter,
+  X,
+  Layers,
 } from "lucide-react";
-import { format } from "date-fns";
 import TaskForm from "./TaskForm";
 import TaskCard from "./TaskCard";
 import Modal from "../ui/Modal";
@@ -47,7 +46,6 @@ export default function TaskList({ projectId, milestoneId }) {
         query = query.eq("milestone_id", milestoneId);
       }
 
-      // Apply filters
       if (filters.status) {
         query = query.eq("status", filters.status);
       }
@@ -56,7 +54,6 @@ export default function TaskList({ projectId, milestoneId }) {
         query = query.eq("priority", filters.priority);
       }
 
-      // Apply sorting
       switch (filters.sortBy) {
         case "newest":
           query = query.order("created_at", { ascending: false });
@@ -147,7 +144,6 @@ export default function TaskList({ projectId, milestoneId }) {
     );
   }
 
-  // Group tasks by status for better organization
   const groupedTasks = {
     todo: tasks.filter((t) => t.status === "todo"),
     "in-progress": tasks.filter((t) => t.status === "in-progress"),
@@ -156,21 +152,33 @@ export default function TaskList({ projectId, milestoneId }) {
   };
 
   const statusConfig = {
-    todo: { title: "To Do", icon: Circle, color: "bg-gray-100 text-gray-800" },
+    todo: {
+      title: "To Do",
+      icon: Circle,
+      color: "from-gray-400 to-gray-500",
+      bgColor: "bg-gray-50",
+      borderColor: "border-gray-200",
+    },
     "in-progress": {
       title: "In Progress",
       icon: Clock,
-      color: "bg-blue-100 text-blue-800",
+      color: "from-blue-500 to-indigo-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
     review: {
       title: "Review",
       icon: AlertCircle,
-      color: "bg-yellow-100 text-yellow-800",
+      color: "from-yellow-500 to-orange-600",
+      bgColor: "bg-yellow-50",
+      borderColor: "border-yellow-200",
     },
     completed: {
       title: "Completed",
       icon: CheckCircle,
-      color: "bg-green-100 text-green-800",
+      color: "from-green-500 to-emerald-600",
+      bgColor: "bg-green-50",
+      borderColor: "border-green-200",
     },
   };
 
@@ -178,49 +186,60 @@ export default function TaskList({ projectId, milestoneId }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
-          <p className="text-sm text-gray-600">
-            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-md">
+            <Layers className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Tasks</h3>
+            <p className="text-sm text-gray-600">
+              {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Filter Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary py-2 text-sm flex items-center"
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-all ${
+              showFilters
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-blue-300"
+            }`}
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {showFilters ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Filter className="h-4 w-4" />
+            )}
+            <span>{showFilters ? "Hide" : "Filters"}</span>
           </button>
 
-          {/* New Task Button */}
           <button
             onClick={() => {
               setEditingTask(null);
               setIsModalOpen(true);
             }}
-            className="btn-primary py-2 text-sm flex items-center"
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
+            <Plus className="h-4 w-4" />
+            <span>Add Task</span>
           </button>
         </div>
       </div>
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="card">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 animate-slideDown">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Status
               </label>
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="input text-sm"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
               >
                 <option value="">All Status</option>
                 <option value="todo">To Do</option>
@@ -231,13 +250,13 @@ export default function TaskList({ projectId, milestoneId }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Priority
               </label>
               <select
                 value={filters.priority}
                 onChange={(e) => handleFilterChange("priority", e.target.value)}
-                className="input text-sm"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
               >
                 <option value="">All Priorities</option>
                 <option value="urgent">Urgent</option>
@@ -248,28 +267,28 @@ export default function TaskList({ projectId, milestoneId }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Sort By
               </label>
               <select
                 value={filters.sortBy}
                 onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-                className="input text-sm"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="deadline">Deadline</option>
               </select>
             </div>
+          </div>
 
-            <div className="sm:col-span-3 flex justify-end space-x-2">
-              <button
-                onClick={clearFilters}
-                className="btn-secondary py-2 text-sm"
-              >
-                Clear Filters
-              </button>
-            </div>
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       )}
@@ -294,14 +313,27 @@ export default function TaskList({ projectId, milestoneId }) {
 
       {/* Tasks Grid */}
       {tasks.length === 0 ? (
-        <div className="card text-center py-12">
-          <div className="mx-auto">
-            <h4 className="text-lg font-medium text-gray-900 mb-1">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 text-center py-16">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Layers className="h-10 w-10 text-purple-600" />
+            </div>
+            <h4 className="text-xl font-bold text-gray-900 mb-2">
               No tasks yet
             </h4>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-600 mb-6">
               Add your first task to get started
             </p>
+            <button
+              onClick={() => {
+                setEditingTask(null);
+                setIsModalOpen(true);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              <Plus className="h-5 w-5 inline mr-2" />
+              Create Task
+            </button>
           </div>
         </div>
       ) : (
@@ -311,20 +343,27 @@ export default function TaskList({ projectId, milestoneId }) {
             const Icon = config.icon;
 
             return (
-              <div key={status} className="card">
-                <div className="flex items-center justify-between mb-4">
+              <div
+                key={status}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow"
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-100">
                   <div className="flex items-center space-x-2">
-                    <Icon className="h-5 w-5 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">
-                      {config.title}
-                    </h4>
+                    <div className={`p-2 rounded-lg ${config.bgColor}`}>
+                      <Icon className="h-5 w-5 text-gray-700" />
+                    </div>
+                    <h4 className="font-bold text-gray-900">{config.title}</h4>
                   </div>
-                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                  <div
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${config.bgColor} border ${config.borderColor}`}
+                  >
                     {statusTasks.length}
-                  </span>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
+                {/* Tasks */}
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                   {statusTasks.map((task) => (
                     <TaskCard
                       key={task.id}
@@ -340,22 +379,23 @@ export default function TaskList({ projectId, milestoneId }) {
                   ))}
 
                   {statusTasks.length === 0 && (
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      No tasks
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      <Circle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No tasks</p>
                     </div>
                   )}
                 </div>
 
-                {/* Add task to this status */}
+                {/* Add Task Button */}
                 <button
                   onClick={() => {
                     setEditingTask(null);
                     setIsModalOpen(true);
                   }}
-                  className="w-full mt-4 p-2 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-400 text-sm"
+                  className="w-full mt-4 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
                 >
-                  <Plus className="h-4 w-4 inline mr-1" />
-                  Add task
+                  <Plus className="h-4 w-4" />
+                  <span>Add task</span>
                 </button>
               </div>
             );
@@ -369,11 +409,41 @@ export default function TaskList({ projectId, milestoneId }) {
           setEditingTask(null);
           setIsModalOpen(true);
         }}
-        className="fixed bottom-6 right-6 sm:hidden h-14 w-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 z-40"
+        className="fixed bottom-6 right-6 lg:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transform hover:scale-110 transition-all z-40"
         aria-label="Add Task"
       >
         <Plus className="h-6 w-6" />
       </button>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 }

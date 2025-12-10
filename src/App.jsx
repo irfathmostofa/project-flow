@@ -12,6 +12,8 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Profile from "./pages/Profile";
 import Layout from "./components/layout/Layout";
+import { ToastProvider } from "./context/ToastContext";
+import ToastContainer from "./components/ui/Toast";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -44,77 +46,80 @@ function PublicRoute({ children }) {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
+      <ToastProvider>
+        <AuthProvider>
+          <ToastContainer />
+          <Routes>
+            {/* Public Routes */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
 
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              }
+            />
 
-          {/* Private Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
+            {/* Private Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/projects"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Projects />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/projects"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Projects />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/projects/:id"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <ProjectDetail />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/projects/:id"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ProjectDetail />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
 
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Profile />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
 
-          {/* Redirects */}
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </AuthProvider>
+            {/* Redirects */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </AuthProvider>
+      </ToastProvider>
     </Router>
   );
 }

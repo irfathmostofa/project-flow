@@ -119,7 +119,7 @@ export default function TaskForm({
           required
           value={formData.title}
           onChange={handleChange}
-          className="input"
+          className="input w-full"
           placeholder="Enter task title"
         />
       </div>
@@ -137,7 +137,7 @@ export default function TaskForm({
           rows="3"
           value={formData.description}
           onChange={handleChange}
-          className="input resize-none"
+          className="input resize-none w-full"
           placeholder="Describe the task..."
         />
       </div>

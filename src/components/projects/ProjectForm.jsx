@@ -82,7 +82,7 @@ export default function ProjectForm({ onSuccess, initialData = null }) {
           required
           value={formData.name}
           onChange={handleChange}
-          className="input"
+          className="input w-full"
           placeholder="Enter project name"
         />
       </div>
@@ -100,7 +100,7 @@ export default function ProjectForm({ onSuccess, initialData = null }) {
           rows="3"
           value={formData.description}
           onChange={handleChange}
-          className="input resize-none"
+          className="input resize-none w-full"
           placeholder="Describe your project..."
         />
       </div>
@@ -119,7 +119,7 @@ export default function ProjectForm({ onSuccess, initialData = null }) {
             name="deadline"
             value={formData.deadline}
             onChange={handleChange}
-            className="input"
+            className="input "
           />
         </div>
 
