@@ -130,8 +130,8 @@ export default function ProjectList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-2">
+      <div className="max-w-full mx-auto space-y-6">
         {/* Header Section */}
         <div className="relative bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-6 sm:p-8">
           {/* Decorative Elements */}
