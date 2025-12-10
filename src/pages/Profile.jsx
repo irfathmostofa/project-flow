@@ -252,7 +252,9 @@ export default function Profile() {
                       Full Name
                     </h3>
                     <p className="text-gray-900 font-semibold">
-                      {profile?.full_name || "Not set"}
+                      {profile?.full_name
+                        ? profile?.full_name
+                        : user.user_metadata.full_name}
                     </p>
                   </div>
 
