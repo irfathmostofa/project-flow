@@ -206,11 +206,7 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Footer Text */}
-        <p className="mt-8 text-center text-sm text-gray-600">
-          Secure login powered by{" "}
-          <span className="font-semibold text-blue-600">ProjectFlow</span>
-        </p>
+       
       </div>
 
       <style jsx>{`

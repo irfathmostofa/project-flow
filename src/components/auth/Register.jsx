@@ -286,17 +286,6 @@ export default function Register() {
             </div>
           </form>
         </div>
-
-        {/* Footer Text */}
-        <p className="mt-8 text-center text-sm text-gray-600">
-          By signing up, you agree to our{" "}
-          <a
-            href="#"
-            className="font-semibold text-purple-600 hover:text-purple-700"
-          >
-            Terms of Service
-          </a>
-        </p>
       </div>
 
       <style jsx>{`
