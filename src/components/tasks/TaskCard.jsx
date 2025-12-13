@@ -200,16 +200,16 @@ export default function TaskCard({
                 </h4>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-1 mb-1">
                 <span
-                  className={`text-xs px-3 py-1 rounded-full font-semibold border ${
+                  className={`text-xs px-1 py-1 rounded-full font-semibold border ${
                     priorityColors[task.priority]
                   }`}
                 >
                   {task.priority.toUpperCase()}
                 </span>
                 <span
-                  className={`text-xs px-3 py-1 rounded-full font-semibold border ${
+                  className={`text-xm px-1 py-1 rounded-full font-semibold border ${
                     statusColors[task.status]
                   }`}
                 >
@@ -218,7 +218,7 @@ export default function TaskCard({
               </div>
 
               {task.description && (
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                <p className="text-gray-600 text-xs mb-4 line-clamp-2">
                   {task.description}
                 </p>
               )}
