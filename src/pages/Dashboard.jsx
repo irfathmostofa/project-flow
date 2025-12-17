@@ -156,60 +156,101 @@ export default function Dashboard() {
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-2">
       <div className="max-w-ful mx-auto space-y-8">
         {/* Header */}
-        <div className="relative">
-          <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-400 rounded-full opacity-20 blur-3xl"></div>
-          <div className="absolute -top-4 -right-4 w-32 h-32 bg-purple-400 rounded-full opacity-20 blur-3xl"></div>
-
+        <div className="flex justify-between items-center">
           <div className="relative">
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
-                <Zap className="h-6 w-6 text-white" />
+            <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-400 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute -top-4 -right-4 w-32 h-32 bg-purple-400 rounded-full opacity-20 blur-3xl"></div>
+
+            <div className="relative">
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  Dashboard
+                </h1>
+                <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Dashboard
-              </h1>
-              <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
+              <p className="text-gray-600 ml-0 sm:ml-16">
+                Welcome back! Here's your productivity overview
+              </p>
             </div>
-            <p className="text-gray-600 ml-0 sm:ml-16">
-              Welcome back! Here's your productivity overview
-            </p>
+          </div>
+          <div className="bg-linear-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl p-4 sm:p-2 text-white">
+            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-4">
+                <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+                  <TrendingUp className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">
+                    Overall Progress
+                  </p>
+                  <p className="text-3xl font-bold">{completionRate}%</p>
+                  <p className="text-blue-100 text-sm">
+                    {stats.completedTasks} of {stats.totalTasks} tasks completed
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-64">
+                <div className="h-4 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 relative"
+                    style={{ width: `${completionRate}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
-                className="group relative bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+                className="group relative bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
               >
+                {/* Background gradient */}
                 <div
-                  className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-10 rounded-full -mr-12 -mt-12`}
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
                 ></div>
 
-                <div className="relative">
-                  <div className="flex items-start justify-between mb-3">
+                <div className="relative flex items-center justify-between">
+                  {/* Left side: Icon and title */}
+                  <div className="flex items-center space-x-3 sm:space-x-4">
                     <div
-                      className={`p-3 rounded-xl ${stat.iconBg} group-hover:scale-110 transition-transform`}
+                      className={`p-2 sm:p-2.5 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
                     >
-                      <Icon className="h-5 w-5 text-gray-700" />
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-medium text-gray-600">
+                        {stat.title}
+                      </p>
+                      {/* Value for mobile - shown below on small screens */}
+                      <p className="sm:hidden text-lg font-bold text-gray-900 mt-1">
+                        {stat.value}
+                      </p>
                     </div>
                   </div>
 
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {stat.title}
-                  </p>
+                  {/* Right side: Value (hidden on mobile, shown above) */}
                   <p
-                    className={`text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
+                    className={`hidden sm:block text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
                   >
                     {stat.value}
                   </p>
                 </div>
 
+                {/* Hover effect line */}
                 <div
-                  className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left`}
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left`}
                 ></div>
               </div>
             );
@@ -217,35 +258,6 @@ export default function Dashboard() {
         </div>
 
         {/* Completion Rate Card */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 text-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
-                <TrendingUp className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm font-medium">
-                  Overall Progress
-                </p>
-                <p className="text-3xl font-bold">{completionRate}%</p>
-                <p className="text-blue-100 text-sm">
-                  {stats.completedTasks} of {stats.totalTasks} tasks completed
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-64">
-              <div className="h-4 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 relative"
-                  style={{ width: `${completionRate}%` }}
-                >
-                  <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Projects */}

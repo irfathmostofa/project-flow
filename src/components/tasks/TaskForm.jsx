@@ -15,6 +15,7 @@ export default function TaskForm({
   const [users, setUsers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Initialize form data with proper null handling
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
     description: initialData?.description || "",
@@ -51,51 +52,46 @@ export default function TaskForm({
     setUsers(data || []);
   };
 
-  // Validation function
+  // Validation function - UPDATED: assignee_id is now optional
   const validateForm = () => {
     const errors = {};
 
-    // Required fields validation
+    // Only title is required
     if (!formData.title.trim()) {
       errors.title = "Task title is required";
     }
 
-    if (!formData.milestone_id) {
-      errors.milestone_id = "Please select a milestone";
-    }
+    // Assignee is optional - no validation needed
 
-    if (!formData.assignee_id) {
-      errors.assignee_id = "Please assign the task to someone";
-    }
-
-    if (!formData.deadline) {
-      errors.deadline = "Deadline is required";
-    } else {
-      // Validate deadline is not in the past
+    // Deadline is optional - no validation needed
+    // But if provided, validate it's not in the past
+    if (formData.deadline) {
       const deadlineDate = new Date(formData.deadline);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+      today.setHours(0, 0, 0, 0);
 
       if (deadlineDate < today) {
         errors.deadline = "Deadline cannot be in the past";
       }
 
-      // If milestone has a deadline, validate task deadline is not after milestone deadline
-      const selectedMilestone = milestones.find(
-        (m) => m.id === formData.milestone_id
-      );
-      if (selectedMilestone?.deadline) {
-        const milestoneDeadline = new Date(selectedMilestone.deadline);
-        if (deadlineDate > milestoneDeadline) {
-          errors.deadline = `Task deadline cannot be after milestone deadline (${new Date(
-            milestoneDeadline
-          ).toLocaleDateString()})`;
+      // If milestone is selected and has a deadline, validate task deadline is not after milestone deadline
+      if (formData.milestone_id) {
+        const selectedMilestone = milestones.find(
+          (m) => m.id === formData.milestone_id
+        );
+        if (selectedMilestone?.deadline) {
+          const milestoneDeadline = new Date(selectedMilestone.deadline);
+          if (deadlineDate > milestoneDeadline) {
+            errors.deadline = `Task deadline cannot be after milestone deadline (${new Date(
+              milestoneDeadline
+            ).toLocaleDateString()})`;
+          }
         }
       }
     }
 
     // Description validation (optional but with max length)
-    if (formData.description.length > 1000) {
+    if (formData.description && formData.description.length > 1000) {
       errors.description = "Description cannot exceed 1000 characters";
     }
 
@@ -115,11 +111,21 @@ export default function TaskForm({
     setLoading(true);
 
     try {
+      // Prepare task data with proper null handling for ALL optional fields
       const taskData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description || null,
+        status: formData.status,
+        priority: formData.priority,
         project_id: projectId,
+        // Convert empty strings to null for all optional fields
+        milestone_id: formData.milestone_id ? formData.milestone_id : null,
+        assignee_id: formData.assignee_id ? formData.assignee_id : null,
+        deadline: formData.deadline || null,
         updated_at: new Date().toISOString(),
       };
+
+      console.log("Submitting task data:", taskData); // Debug log
 
       if (initialData) {
         // Update task
@@ -143,7 +149,8 @@ export default function TaskForm({
 
       onSuccess?.();
     } catch (error) {
-      setError(error.message);
+      console.error("Error saving task:", error);
+      setError(error.message || "Failed to save task.");
     } finally {
       setLoading(false);
     }
@@ -171,7 +178,7 @@ export default function TaskForm({
     return today.toISOString().split("T")[0];
   };
 
-  // Get milestone deadline for max attribute
+  // Get milestone deadline for max attribute (only if milestone is selected)
   const getMilestoneDeadline = () => {
     if (!formData.milestone_id) return null;
     const milestone = milestones.find((m) => m.id === formData.milestone_id);
@@ -183,7 +190,21 @@ export default function TaskForm({
       {/* Error Messages */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
+          <strong>Error:</strong> {error}
+          {error.includes("null value") && (
+            <div className="mt-2 text-sm">
+              <p>Possible database constraints issue. Please check:</p>
+              <code className="block bg-gray-100 p-2 rounded mt-1">
+                -- Make sure both columns allow NULL
+                <br />
+                ALTER TABLE tasks ALTER COLUMN milestone_id DROP NOT NULL;
+                <br />
+                ALTER TABLE tasks ALTER COLUMN assignee_id DROP NOT NULL;
+                <br />
+                ALTER TABLE tasks ALTER COLUMN deadline DROP NOT NULL;
+              </code>
+            </div>
+          )}
         </div>
       )}
 
@@ -201,7 +222,7 @@ export default function TaskForm({
         </div>
       )}
 
-      {/* Title Field */}
+      {/* Title Field - REQUIRED */}
       <div>
         <label
           htmlFor="title"
@@ -228,13 +249,13 @@ export default function TaskForm({
         )}
       </div>
 
-      {/* Description Field */}
+      {/* Description Field - OPTIONAL */}
       <div>
         <label
           htmlFor="description"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Description{" "}
+          Description (Optional)
           {formData.description.length > 0 && (
             <span className="text-xs text-gray-500">
               ({formData.description.length}/1000 characters)
@@ -252,7 +273,7 @@ export default function TaskForm({
               ? "border-red-300 focus:border-red-500 focus:ring-red-500"
               : ""
           }`}
-          placeholder="Describe the task..."
+          placeholder="Describe the task (optional)..."
           maxLength={1000}
         />
         {validationErrors.description && (
@@ -263,7 +284,7 @@ export default function TaskForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Status Field */}
+        {/* Status Field - REQUIRED with default */}
         <div>
           <label
             htmlFor="status"
@@ -285,7 +306,7 @@ export default function TaskForm({
           </select>
         </div>
 
-        {/* Priority Field */}
+        {/* Priority Field - REQUIRED with default */}
         <div>
           <label
             htmlFor="priority"
@@ -309,83 +330,67 @@ export default function TaskForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Milestone Field - Required */}
+        {/* Milestone Field - OPTIONAL */}
         <div>
           <label
             htmlFor="milestone_id"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Milestone *
+            Milestone (Optional)
           </label>
           <select
             id="milestone_id"
             name="milestone_id"
             value={formData.milestone_id}
             onChange={handleChange}
-            className={`input ${
-              validationErrors.milestone_id
-                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                : ""
-            }`}
-            required
+            className="input w-full"
           >
-            <option value="">Select a milestone</option>
+            <option value="">No milestone</option>
             {milestones.map((milestone) => (
               <option key={milestone.id} value={milestone.id}>
                 {milestone.name}
+                {milestone.deadline &&
+                  ` (Due: ${new Date(
+                    milestone.deadline
+                  ).toLocaleDateString()})`}
               </option>
             ))}
           </select>
-          {validationErrors.milestone_id && (
-            <p className="mt-1 text-sm text-red-600">
-              {validationErrors.milestone_id}
-            </p>
-          )}
         </div>
 
-        {/* Assignee Field - Required */}
+        {/* Assignee Field - OPTIONAL */}
         <div>
           <label
             htmlFor="assignee_id"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Assign To *
+            Assign To
           </label>
           <select
             id="assignee_id"
             name="assignee_id"
             value={formData.assignee_id}
             onChange={handleChange}
-            className={`input ${
-              validationErrors.assignee_id
-                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                : ""
-            }`}
-            required
+            className="input"
           >
-            <option value="">Select an assignee</option>
+            <option value="">Unassigned</option>
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.full_name || user.email}
               </option>
             ))}
           </select>
-          {validationErrors.assignee_id && (
-            <p className="mt-1 text-sm text-red-600">
-              {validationErrors.assignee_id}
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Deadline Field - Required */}
+      {/* Deadline Field - OPTIONAL */}
       <div>
         <label
           htmlFor="deadline"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Deadline *
-          {getMilestoneDeadline() && (
+          Deadline (Optional)
+          {formData.milestone_id && getMilestoneDeadline() && (
             <span className="text-xs text-gray-500 ml-2">
               (Must be before{" "}
               {new Date(getMilestoneDeadline()).toLocaleDateString()})
@@ -405,17 +410,10 @@ export default function TaskForm({
               ? "border-red-300 focus:border-red-500 focus:ring-red-500"
               : ""
           }`}
-          required
         />
         {validationErrors.deadline && (
           <p className="mt-1 text-sm text-red-600">
             {validationErrors.deadline}
-          </p>
-        )}
-        {!validationErrors.deadline && (
-          <p className="mt-1 text-sm text-gray-500">
-            Select a date on or after today
-            {getMilestoneDeadline() && ` and before milestone deadline`}
           </p>
         )}
       </div>
