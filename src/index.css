@@ -167,3 +167,37 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+/* Bottom navigation styles */
+.bottom-nav-item {
+  @apply flex flex-col items-center justify-center flex-1 h-full;
+}
+
+.bottom-nav-icon {
+  @apply h-5 w-5 text-gray-500;
+}
+
+.bottom-nav-icon-active {
+  @apply text-blue-600;
+}
+
+.bottom-nav-label {
+  @apply text-xs mt-1 text-gray-600;
+}
+
+.bottom-nav-label-active {
+  @apply text-blue-600 font-medium;
+}
+
+/* Floating action button for mobile */
+.fab-center {
+  @apply relative -top-4;
+}
+
+.fab-button {
+  @apply h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg;
+}
+
+/* Ensure content doesn't hide behind bottom nav */
+.mobile-content-padding {
+  padding-bottom: 4rem;
+}

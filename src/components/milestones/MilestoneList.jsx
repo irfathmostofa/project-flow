@@ -375,33 +375,6 @@ export default function MilestoneList({ projectId }) {
                   {/* Main Content */}
                   <div className="p-4 sm:p-6 pl-5 sm:pl-8">
                     <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
-                      {/* Timeline Dot & Status Button */}
-                      <div className="flex flex-col items-center flex-shrink-0">
-                        <button
-                          onClick={() =>
-                            updateMilestoneStatus(
-                              milestone.id,
-                              milestone.status === "completed"
-                                ? "pending"
-                                : "completed"
-                            )
-                          }
-                          disabled={isUpdatingStatus}
-                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${config.bgColor} border-2 ${config.borderColor} flex items-center justify-center shadow-sm hover:shadow-md transition-all disabled:opacity-50`}
-                        >
-                          {isUpdatingStatus ? (
-                            <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 animate-spin text-gray-400" />
-                          ) : (
-                            <StatusIcon
-                              className={`h-4 w-4 sm:h-6 sm:w-6 ${config.textColor}`}
-                            />
-                          )}
-                        </button>
-                        {index < milestones.length - 1 && (
-                          <div className="w-0.5 h-4 sm:h-6 bg-gray-200 mt-2" />
-                        )}
-                      </div>
-
                       {/* Milestone Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">

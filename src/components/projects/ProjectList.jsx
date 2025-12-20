@@ -169,7 +169,7 @@ export default function ProjectList() {
                   }`}
                   title="Grid View"
                 >
-                  <Grid className="h-5 w-5" />
+                  <Grid className="h-4  w-4 lg:h-5 lg:w-5" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
@@ -180,7 +180,7 @@ export default function ProjectList() {
                   }`}
                   title="List View"
                 >
-                  <List className="h-5 w-5" />
+                  <List className="h-4  w-4 lg:h-5 lg:w-5" />
                 </button>
               </div>
 
@@ -194,24 +194,26 @@ export default function ProjectList() {
                 }`}
               >
                 {showFilters ? (
-                  <X className="h-5 w-5" />
+                  <X className="h-4  w-4 lg:h-5 lg:w-5" />
                 ) : (
-                  <Filter className="h-5 w-5" />
+                  <Filter className="h-4  w-4 lg:h-5 lg:w-5" />
                 )}
                 <span>{showFilters ? "Hide Filters" : "Filters"}</span>
               </button>
 
               {/* New Project Button */}
-              <button
-                onClick={() => {
-                  setEditingProject(null);
-                  setIsModalOpen(true);
-                }}
-                className="group px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center space-x-2"
-              >
-                <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
-                <span>New Project</span>
-              </button>
+              <div className="hidden lg:block">
+                <button
+                  onClick={() => {
+                    setEditingProject(null);
+                    setIsModalOpen(true);
+                  }}
+                  className="group   px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center space-x-2"
+                >
+                  <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
+                  <span>New Project</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -363,21 +365,17 @@ export default function ProjectList() {
             ))}
           </div>
         )}
-
-        {/* Mobile Floating Action Button */}
-        <button
-          onClick={() => {
-            setEditingProject(null);
-            setIsModalOpen(true);
-          }}
-          className="fixed bottom-6 right-6 lg:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transform hover:scale-110 transition-all z-40"
-          aria-label="New Project"
-        >
-          <Plus className="h-6 w-6" />
-        </button>
       </div>
-
-
+      <button
+        onClick={() => {
+          setEditingProject(null);
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-21 right-6 lg:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transform hover:scale-110 transition-all z-40"
+        aria-label="New Project"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 }

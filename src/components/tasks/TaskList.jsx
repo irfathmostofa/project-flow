@@ -428,7 +428,7 @@ export default function TaskList({ projectId, milestoneId }) {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                className="bg-white rounded-lg shadow-sm border border-gray-200 "
               >
                 <TaskCard
                   task={task}
@@ -557,7 +557,7 @@ export default function TaskList({ projectId, milestoneId }) {
               return (
                 <div
                   key={status}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow min-h-[600px] flex flex-col"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 hover:shadow-md transition-shadow min-h-[600px] flex flex-col"
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-100">
@@ -624,13 +624,11 @@ export default function TaskList({ projectId, milestoneId }) {
           setEditingTask(null);
           setIsModalOpen(true);
         }}
-        className="fixed bottom-6 right-6 sm:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transform hover:scale-110 transition-all z-40"
+        className="fixed bottom-21 right-6 sm:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transform hover:scale-110 transition-all z-40"
         aria-label="Add Task"
       >
         <Plus className="h-6 w-6" />
       </button>
-
-    
     </div>
   );
 }

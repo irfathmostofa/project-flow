@@ -146,10 +146,10 @@ export default function ProjectDetail() {
             className={`absolute top-0 right-0 w-64 h-64 bg-linear-to-br ${statusConfig.gradient} opacity-10 rounded-full -mr-32 -mt-32`}
           ></div>
 
-          <div className="relative p-6 sm:p-8">
+          <div className="relative p-2 sm:p-8">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between space-y-6 lg:space-y-0">
               <div className="flex-1">
-                <div className="flex items-start space-x-3 mb-4">
+                <div className="flex items-start space-x-3 ">
                   <button
                     onClick={() => navigate("/projects")}
                     className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
@@ -159,17 +159,17 @@ export default function ProjectDetail() {
                   </button>
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-3 mb-2">
-                      <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                      <h1 className="text-lg sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                         {project.name}
                       </h1>
                       <span
-                        className={`px-4 py-2 rounded-xl text-sm font-bold border-2 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                        className={`px-2 sm:px:4 py-1 rounded-xl text-sm font-bold border-2 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
                       >
                         {project.status.replace("_", " ").toUpperCase()}
                       </span>
-                      <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
+                      <Sparkles className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-500 animate-pulse" />
                     </div>
-                    <p className="text-gray-600 text-lg">
+                    <p className="text-gray-600 text-sm">
                       {project.description}
                     </p>
                   </div>
@@ -181,21 +181,21 @@ export default function ProjectDetail() {
                   onClick={() => setIsEditModalOpen(true)}
                   className="group px-5 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 hover:border-blue-300 text-blue-700 rounded-xl font-semibold hover:shadow-md transition-all flex items-center"
                 >
-                  <Edit className="h-5 w-5 mr-2 group-hover:rotate-12 transition-transform" />
+                  <Edit className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:rotate-12 transition-transform" />
                   Edit
                 </button>
                 <button
                   onClick={deleteProject}
                   className="group px-5 py-3 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 hover:border-red-300 text-red-700 rounded-xl font-semibold hover:shadow-md transition-all flex items-center"
                 >
-                  <Trash2 className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:scale-110 transition-transform" />
                   Delete
                 </button>
               </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <div className="group p-5 bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-md transition-all">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-blue-100 rounded-xl group-hover:scale-110 transition-transform">
@@ -298,7 +298,7 @@ export default function ProjectDetail() {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-1 sm:p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <MilestoneList projectId={project.id} />

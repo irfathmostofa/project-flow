@@ -156,7 +156,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-2">
       <div className="max-w-ful mx-auto space-y-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 items-center">
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-400 rounded-full opacity-20 blur-3xl"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-purple-400 rounded-full opacity-20 blur-3xl"></div>
@@ -177,7 +177,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="bg-linear-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl p-4 sm:p-2 text-white">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row lg:items-center md:items-center justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4">
                 <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
                   <TrendingUp className="h-8 w-8 text-white" />
@@ -262,7 +262,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Projects */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
+            <div className="bg-linear-to-r from-blue-100 to-indigo-100 lg:px-6 md:px-4 px-2 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -282,7 +282,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="lg:px-6 md:px-4 px-2 py-4">
               <div className="space-y-3">
                 {recentProjects.length === 0 ? (
                   <div className="text-center py-12">
@@ -347,11 +347,11 @@ export default function Dashboard() {
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <Clock className="h-5 w-5 text-purple-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-md md:text-xl lg:text-xl font-bold text-gray-900">
                     Upcoming Deadlines
                   </h2>
                 </div>
-                <span className="text-xs font-semibold text-gray-600 bg-white px-3 py-1 rounded-full">
+                <span className="text-xs font-semibold text-gray-600 bg-white px-1 py-1 rounded-full">
                   Next 7 days
                 </span>
               </div>

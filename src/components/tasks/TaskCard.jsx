@@ -46,7 +46,7 @@ export default function TaskCard({
     return (
       <div className="group relative bg-gradient-to-br from-white to-gray-50 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200">
         <div className="flex items-start space-x-3">
-          <button
+          {/* <button
             onClick={() =>
               onStatusChange?.(
                 task.id,
@@ -59,7 +59,7 @@ export default function TaskCard({
             }
           >
             {statusIcons[task.status]}
-          </button>
+          </button> */}
 
           <div className="min-w-0 flex-1">
             <h4

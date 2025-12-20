@@ -133,7 +133,7 @@ export default function Profile() {
               <div className="flex items-center space-x-4">
                 {/* Avatar */}
                 <div className="relative group">
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 bg-white rounded-full flex items-center justify-center shadow-xl ring-4 ring-white/50">
+                  <div className="h-15 w-15 sm:h-24 sm:w-24 bg-white rounded-full flex items-center justify-center shadow-xl ring-4 ring-white/50">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
@@ -153,7 +153,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                  <h2 className="text-md sm:text-3xl font-bold text-white">
                     {profile?.full_name || "User"}
                   </h2>
                   <p className="text-purple-100 flex items-center mt-1">
@@ -367,8 +367,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }
