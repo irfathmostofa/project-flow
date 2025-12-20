@@ -183,10 +183,12 @@ export default function Dashboard() {
                   <TrendingUp className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <p className="text-blue-100 text-sm font-medium">
+                  <p className="text-blue-100 text-sm font-medium m-0">
                     Overall Progress
                   </p>
-                  <p className="text-3xl font-bold">{completionRate}%</p>
+                  <p className=" text-md sm:text-2xl font-bold">
+                    {completionRate}%
+                  </p>
                   <p className="text-blue-100 text-sm">
                     {stats.completedTasks} of {stats.totalTasks} tasks completed
                   </p>
