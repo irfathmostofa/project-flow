@@ -79,22 +79,12 @@ export default function TaskForm({
   const validateForm = () => {
     const errors = {};
 
-    // Required fields validation
+    // Required fields validation - Only title is required
     if (!formData.title.trim()) {
       errors.title = "Task title is required";
     }
 
-    if (!formData.milestone_id) {
-      errors.milestone_id = "Please select a milestone";
-    }
-
-    if (!formData.assignee_id) {
-      errors.assignee_id = "Please assign the task to someone";
-    }
-
-    if (!formData.deadline) {
-      errors.deadline = "Deadline is required";
-    } else {
+    if (formData.deadline) {
       // Validate deadline is not in the past for new tasks
       const deadlineDate = new Date(formData.deadline);
       const today = new Date();
@@ -154,15 +144,15 @@ export default function TaskForm({
     setLoading(true);
 
     try {
-      // Prepare task data
+      // Prepare task data - null for empty optional fields
       const taskData = {
         title: formData.title,
-        description: formData.description,
+        description: formData.description || null,
         status: formData.status,
         priority: formData.priority,
-        assignee_id: formData.assignee_id,
-        deadline: formData.deadline,
-        milestone_id: formData.milestone_id,
+        assignee_id: formData.assignee_id || null,
+        deadline: formData.deadline || null,
+        milestone_id: formData.milestone_id || null,
         project_id: projectId,
         updated_at: new Date().toISOString(),
         // Suggestions (always optional)
@@ -230,7 +220,6 @@ export default function TaskForm({
           .insert([
             {
               ...taskData,
-              created_by: user?.id,
               created_at: new Date().toISOString(),
             },
           ])
@@ -314,13 +303,11 @@ export default function TaskForm({
     return milestone?.deadline ? milestone.deadline.split("T")[0] : null;
   };
 
-  // Check if current user can edit feedback
-
   // Check if feedback section should be shown
   const showFeedbackSection = formData.status === "review" || formData.feedback;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-2">
       {/* Error Messages */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
@@ -407,7 +394,7 @@ export default function TaskForm({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {/* Status Field */}
             <div>
               <label
@@ -457,88 +444,68 @@ export default function TaskForm({
 
       {/* Assignment & Timeline Section */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">
-          Assignment & Timeline
-        </h3>
-
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Milestone Field - Required */}
+            {/* Milestone Field - Optional */}
             <div>
               <label
                 htmlFor="milestone_id"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Milestone *
+                Milestone (Optional)
               </label>
               <select
                 id="milestone_id"
                 name="milestone_id"
                 value={formData.milestone_id}
                 onChange={handleChange}
-                className={`input w-full ${
-                  validationErrors.milestone_id
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                    : ""
-                }`}
-                required
+                className="input w-full"
               >
-                <option value="">Select a milestone</option>
+                <option value="">No milestone selected</option>
                 {milestones.map((milestone) => (
                   <option key={milestone.id} value={milestone.id}>
                     {milestone.name}
+                    {milestone.deadline &&
+                      ` (Due: ${new Date(
+                        milestone.deadline
+                      ).toLocaleDateString()})`}
                   </option>
                 ))}
               </select>
-              {validationErrors.milestone_id && (
-                <p className="mt-1 text-sm text-red-600">
-                  {validationErrors.milestone_id}
-                </p>
-              )}
             </div>
 
-            {/* Assignee Field - Required */}
+            {/* Assignee Field - Optional */}
             <div>
               <label
                 htmlFor="assignee_id"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Assign To *
+                Assign To (Optional)
               </label>
               <select
                 id="assignee_id"
                 name="assignee_id"
                 value={formData.assignee_id}
                 onChange={handleChange}
-                className={`input w-full ${
-                  validationErrors.assignee_id
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                    : ""
-                }`}
-                required
+                className="input w-full"
               >
-                <option value="">Select an assignee</option>
+                <option value="">Unassigned</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.full_name || user.email}
                   </option>
                 ))}
               </select>
-              {validationErrors.assignee_id && (
-                <p className="mt-1 text-sm text-red-600">
-                  {validationErrors.assignee_id}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Deadline Field - Required */}
+          {/* Deadline Field - Optional */}
           <div>
             <label
               htmlFor="deadline"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Deadline *
+              Deadline (Optional)
               {getMilestoneDeadline() && (
                 <span className="text-xs text-gray-500 ml-2">
                   (Must be before{" "}
@@ -546,34 +513,44 @@ export default function TaskForm({
                 </span>
               )}
             </label>
-            <input
-              type="date"
-              id="deadline"
-              name="deadline"
-              value={formData.deadline}
-              onChange={handleChange}
-              min={initialData ? undefined : getTodayDate()} // Only restrict for new tasks
-              max={getMilestoneDeadline() || undefined}
-              className={`input w-full ${
-                validationErrors.deadline
-                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                  : ""
-              }`}
-              required
-            />
+            <div className="flex items-center space-x-3">
+              <input
+                type="date"
+                id="deadline"
+                name="deadline"
+                value={formData.deadline}
+                onChange={handleChange}
+                min={initialData ? undefined : getTodayDate()} // Only restrict for new tasks
+                max={getMilestoneDeadline() || undefined}
+                className={`input flex-1 ${
+                  validationErrors.deadline
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+              />
+              {formData.deadline && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, deadline: "" }))
+                  }
+                  className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             {validationErrors.deadline && (
               <p className="mt-1 text-sm text-red-600">
                 {validationErrors.deadline}
               </p>
             )}
-            {!validationErrors.deadline && (
-              <p className="mt-1 text-sm text-gray-500">
-                {initialData
-                  ? "Task deadline"
-                  : "Select a date on or after today"}
-                {getMilestoneDeadline() && ` and before milestone deadline`}
-              </p>
-            )}
+            <p className="mt-1 text-sm text-gray-500">
+              {initialData
+                ? "Set or update deadline (optional)"
+                : "Select a date on or after today (optional)"}
+              {getMilestoneDeadline() && ` and before milestone deadline`}
+            </p>
           </div>
         </div>
       </div>
@@ -585,7 +562,7 @@ export default function TaskForm({
             htmlFor="suggestions"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Suggestions & Notes
+            Suggestions & Notes (Optional)
             {formData.suggestions.length > 0 && (
               <span className="text-xs text-gray-500 ml-2">
                 ({formData.suggestions.length}/2000 characters)
@@ -603,7 +580,7 @@ export default function TaskForm({
                 ? "border-red-300 focus:border-red-500 focus:ring-red-500"
                 : ""
             }`}
-            placeholder="Enter suggestions, notes, or additional requirements..."
+            placeholder="Enter suggestions, notes, or additional requirements... (Optional)"
             maxLength={2000}
           />
           {validationErrors.suggestions && (
@@ -617,49 +594,6 @@ export default function TaskForm({
           </p>
         </div>
       </div>
-
-      {/* Feedback Section (Only shown when status is "review" or feedback already exists) */}
-      {showFeedbackSection && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div>
-            <label
-              htmlFor="feedback"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Feedback
-              {formData.feedback.length > 0 && (
-                <span className="text-xs text-gray-500 ml-2">
-                  ({formData.feedback.length}/2000 characters)
-                </span>
-              )}
-            </label>
-            <textarea
-              id="feedback"
-              name="feedback"
-              rows="4"
-              value={formData.feedback}
-              onChange={handleChange}
-              className={`input resize-none w-full ${
-                validationErrors.feedback
-                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                  : ""
-              }`}
-              placeholder="Provide feedback on this task... (Optional)"
-              maxLength={2000}
-            />
-            {validationErrors.feedback && (
-              <p className="mt-1 text-sm text-red-600">
-                {validationErrors.feedback}
-              </p>
-            )}
-            {formData.status === "review" && (
-              <p className="mt-1 text-sm text-blue-600">
-                Task is in review. You can optionally provide feedback.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Info message when status is not review but task has feedback */}
       {formData.feedback && formData.status !== "review" && (
