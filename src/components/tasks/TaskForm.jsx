@@ -15,7 +15,9 @@ export default function TaskForm({
   const [users, setUsers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Initialize form data with proper null handling
+  // Track if status just changed to "review" to auto-fill feedback fields
+  const [statusChangedToReview, setStatusChangedToReview] = useState(false);
+
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
     description: initialData?.description || "",
@@ -24,8 +26,29 @@ export default function TaskForm({
     assignee_id: initialData?.assignee_id || "",
     deadline: initialData?.deadline || "",
     milestone_id: milestoneId || initialData?.milestone_id || "",
+    // Suggestions (always optional)
+    suggestions: initialData?.suggestions || "",
+    suggestion_by: initialData?.suggestion_by || user?.id || "",
+    // Feedback (only when status is "review")
+    feedback: initialData?.feedback || "",
+    feedback_by: initialData?.feedback_by || "",
+    feedback_date: initialData?.feedback_date || "",
   });
 
+  // Check if status changed to "review" on mount
+  useEffect(() => {
+    if (initialData?.status === "review" && !initialData?.feedback_by) {
+      setStatusChangedToReview(true);
+      // Auto-fill feedback fields when status is review
+      setFormData((prev) => ({
+        ...prev,
+        feedback_by: user?.id || "",
+        feedback_date: new Date().toISOString().split("T")[0],
+      }));
+    }
+  }, [initialData, user?.id]);
+
+  // Fetch all necessary data
   useEffect(() => {
     if (projectId) {
       fetchMilestones();
@@ -52,47 +75,67 @@ export default function TaskForm({
     setUsers(data || []);
   };
 
-  // Validation function - UPDATED: assignee_id is now optional
+  // Validation function
   const validateForm = () => {
     const errors = {};
 
-    // Only title is required
+    // Required fields validation
     if (!formData.title.trim()) {
       errors.title = "Task title is required";
     }
 
-    // Assignee is optional - no validation needed
+    if (!formData.milestone_id) {
+      errors.milestone_id = "Please select a milestone";
+    }
 
-    // Deadline is optional - no validation needed
-    // But if provided, validate it's not in the past
-    if (formData.deadline) {
+    if (!formData.assignee_id) {
+      errors.assignee_id = "Please assign the task to someone";
+    }
+
+    if (!formData.deadline) {
+      errors.deadline = "Deadline is required";
+    } else {
+      // Validate deadline is not in the past for new tasks
       const deadlineDate = new Date(formData.deadline);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      if (deadlineDate < today) {
-        errors.deadline = "Deadline cannot be in the past";
+      if (deadlineDate < today && !initialData) {
+        errors.deadline = "Deadline cannot be in the past for new tasks";
       }
 
-      // If milestone is selected and has a deadline, validate task deadline is not after milestone deadline
-      if (formData.milestone_id) {
-        const selectedMilestone = milestones.find(
-          (m) => m.id === formData.milestone_id
-        );
-        if (selectedMilestone?.deadline) {
-          const milestoneDeadline = new Date(selectedMilestone.deadline);
-          if (deadlineDate > milestoneDeadline) {
-            errors.deadline = `Task deadline cannot be after milestone deadline (${new Date(
-              milestoneDeadline
-            ).toLocaleDateString()})`;
-          }
+      // Validate task deadline is not after milestone deadline
+      const selectedMilestone = milestones.find(
+        (m) => m.id === formData.milestone_id
+      );
+      if (selectedMilestone?.deadline) {
+        const milestoneDeadline = new Date(selectedMilestone.deadline);
+        if (deadlineDate > milestoneDeadline) {
+          errors.deadline = `Task deadline cannot be after milestone deadline (${new Date(
+            milestoneDeadline
+          ).toLocaleDateString()})`;
         }
       }
     }
 
-    // Description validation (optional but with max length)
-    if (formData.description && formData.description.length > 1000) {
-      errors.description = "Description cannot exceed 1000 characters";
+    // Validate suggestions length
+    if (formData.suggestions && formData.suggestions.length > 2000) {
+      errors.suggestions = "Suggestions cannot exceed 2000 characters";
+    }
+
+    // Validate feedback length
+    if (formData.feedback && formData.feedback.length > 2000) {
+      errors.feedback = "Feedback cannot exceed 2000 characters";
+    }
+
+    // If status is "review", feedback is optional but if provided, validate it
+    if (formData.status === "review" && formData.feedback.trim()) {
+      if (!formData.feedback_by) {
+        errors.feedback_by = "Please select who provided the feedback";
+      }
+      if (!formData.feedback_date) {
+        errors.feedback_date = "Please provide feedback date";
+      }
     }
 
     setValidationErrors(errors);
@@ -111,21 +154,27 @@ export default function TaskForm({
     setLoading(true);
 
     try {
-      // Prepare task data with proper null handling for ALL optional fields
+      // Prepare task data
       const taskData = {
         title: formData.title,
-        description: formData.description || null,
+        description: formData.description,
         status: formData.status,
         priority: formData.priority,
+        assignee_id: formData.assignee_id,
+        deadline: formData.deadline,
+        milestone_id: formData.milestone_id,
         project_id: projectId,
-        // Convert empty strings to null for all optional fields
-        milestone_id: formData.milestone_id ? formData.milestone_id : null,
-        assignee_id: formData.assignee_id ? formData.assignee_id : null,
-        deadline: formData.deadline || null,
         updated_at: new Date().toISOString(),
+        // Suggestions (always optional)
+        suggestions: formData.suggestions || null,
+        suggestion_by: formData.suggestions
+          ? formData.suggestion_by || user?.id
+          : null,
+        // Feedback (optional, even in review status)
+        feedback: formData.feedback || null,
+        feedback_by: formData.feedback ? formData.feedback_by : null,
+        feedback_date: formData.feedback ? formData.feedback_date : null,
       };
-
-      console.log("Submitting task data:", taskData); // Debug log
 
       if (initialData) {
         // Update task
@@ -135,22 +184,76 @@ export default function TaskForm({
           .eq("id", initialData.id);
 
         if (error) throw error;
+
+        // Log status change activity
+        if (initialData.status !== formData.status) {
+          await supabase.from("task_activities").insert([
+            {
+              task_id: initialData.id,
+              user_id: user?.id,
+              action: "status_changed",
+              details: `Status changed from ${initialData.status} to ${formData.status}`,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+
+        // Log feedback activity if feedback was added
+        if (formData.feedback && !initialData.feedback) {
+          await supabase.from("task_activities").insert([
+            {
+              task_id: initialData.id,
+              user_id: user?.id,
+              action: "feedback_added",
+              details: `Feedback provided`,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+
+        // Log if task moved to review
+        if (formData.status === "review" && initialData.status !== "review") {
+          await supabase.from("task_activities").insert([
+            {
+              task_id: initialData.id,
+              user_id: user?.id,
+              action: "moved_to_review",
+              details: `Task moved to review for feedback`,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
       } else {
-        // Create task
-        const { error } = await supabase.from("tasks").insert([
+        // Create new task
+        const { data, error } = await supabase
+          .from("tasks")
+          .insert([
+            {
+              ...taskData,
+              created_by: user?.id,
+              created_at: new Date().toISOString(),
+            },
+          ])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Log task creation activity
+        await supabase.from("task_activities").insert([
           {
-            ...taskData,
+            task_id: data.id,
+            user_id: user?.id,
+            action: "task_created",
+            details: `Task "${formData.title}" created`,
             created_at: new Date().toISOString(),
           },
         ]);
-
-        if (error) throw error;
       }
 
       onSuccess?.();
     } catch (error) {
-      console.error("Error saving task:", error);
-      setError(error.message || "Failed to save task.");
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -158,10 +261,36 @@ export default function TaskForm({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    const previousStatus = formData.status;
+
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
+
+    // Check if status changed to "review"
+    if (
+      name === "status" &&
+      value === "review" &&
+      previousStatus !== "review"
+    ) {
+      setStatusChangedToReview(true);
+      // Auto-fill feedback fields when status changes to review
+      setFormData((prev) => ({
+        ...prev,
+        feedback_by: user?.id || "",
+        feedback_date: new Date().toISOString().split("T")[0],
+      }));
+    }
+
+    // Check if status changed from "review" to something else
+    if (
+      name === "status" &&
+      previousStatus === "review" &&
+      value !== "review"
+    ) {
+      setStatusChangedToReview(false);
+    }
 
     // Clear validation error for this field when user starts typing
     if (validationErrors[name]) {
@@ -178,41 +307,32 @@ export default function TaskForm({
     return today.toISOString().split("T")[0];
   };
 
-  // Get milestone deadline for max attribute (only if milestone is selected)
+  // Get milestone deadline for max attribute
   const getMilestoneDeadline = () => {
     if (!formData.milestone_id) return null;
     const milestone = milestones.find((m) => m.id === formData.milestone_id);
     return milestone?.deadline ? milestone.deadline.split("T")[0] : null;
   };
 
+  // Check if current user can edit feedback
+
+  // Check if feedback section should be shown
+  const showFeedbackSection = formData.status === "review" || formData.feedback;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Error Messages */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          <strong>Error:</strong> {error}
-          {error.includes("null value") && (
-            <div className="mt-2 text-sm">
-              <p>Possible database constraints issue. Please check:</p>
-              <code className="block bg-gray-100 p-2 rounded mt-1">
-                -- Make sure both columns allow NULL
-                <br />
-                ALTER TABLE tasks ALTER COLUMN milestone_id DROP NOT NULL;
-                <br />
-                ALTER TABLE tasks ALTER COLUMN assignee_id DROP NOT NULL;
-                <br />
-                ALTER TABLE tasks ALTER COLUMN deadline DROP NOT NULL;
-              </code>
-            </div>
-          )}
+          <strong className="font-medium">Error:</strong> {error}
         </div>
       )}
 
       {/* Form-level validation errors */}
       {Object.keys(validationErrors).length > 0 && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          <p className="font-medium mb-1">Please fix the following errors:</p>
-          <ul className="list-disc list-inside text-sm">
+          <p className="font-medium mb-2">Please fix the following errors:</p>
+          <ul className="list-disc list-inside text-sm space-y-1">
             {Object.values(validationErrors)
               .filter(Boolean)
               .map((error, index) => (
@@ -222,201 +342,334 @@ export default function TaskForm({
         </div>
       )}
 
-      {/* Title Field - REQUIRED */}
-      <div>
-        <label
-          htmlFor="title"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Task Title *
-        </label>
-        <input
-          type="text"
-          id="title"
-          name="title"
-          required
-          value={formData.title}
-          onChange={handleChange}
-          className={`input w-full ${
-            validationErrors.title
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-              : ""
-          }`}
-          placeholder="Enter task title"
-        />
-        {validationErrors.title && (
-          <p className="mt-1 text-sm text-red-600">{validationErrors.title}</p>
-        )}
+      {/* Basic Information Section */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          Basic Information
+        </h3>
+
+        <div className="space-y-4">
+          {/* Title Field */}
+          <div>
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Task Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              required
+              value={formData.title}
+              onChange={handleChange}
+              className={`input w-full ${
+                validationErrors.title
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
+              placeholder="Enter task title"
+            />
+            {validationErrors.title && (
+              <p className="mt-1 text-sm text-red-600">
+                {validationErrors.title}
+              </p>
+            )}
+          </div>
+
+          {/* Description Field */}
+          <div>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Description{" "}
+              {formData.description.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  ({formData.description.length}/1000 characters)
+                </span>
+              )}
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows="3"
+              value={formData.description}
+              onChange={handleChange}
+              className={`input resize-none w-full ${
+                validationErrors.description
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
+              placeholder="Describe the task..."
+              maxLength={1000}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Status Field */}
+            <div>
+              <label
+                htmlFor="status"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Status
+              </label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="input w-full"
+              >
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="review">Review</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            {/* Priority Field */}
+            <div>
+              <label
+                htmlFor="priority"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Priority
+              </label>
+              <select
+                id="priority"
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className="input w-full"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Description Field - OPTIONAL */}
-      <div>
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Description (Optional)
-          {formData.description.length > 0 && (
-            <span className="text-xs text-gray-500">
-              ({formData.description.length}/1000 characters)
-            </span>
+      {/* Assignment & Timeline Section */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          Assignment & Timeline
+        </h3>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Milestone Field - Required */}
+            <div>
+              <label
+                htmlFor="milestone_id"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Milestone *
+              </label>
+              <select
+                id="milestone_id"
+                name="milestone_id"
+                value={formData.milestone_id}
+                onChange={handleChange}
+                className={`input w-full ${
+                  validationErrors.milestone_id
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+                required
+              >
+                <option value="">Select a milestone</option>
+                {milestones.map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.name}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.milestone_id && (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.milestone_id}
+                </p>
+              )}
+            </div>
+
+            {/* Assignee Field - Required */}
+            <div>
+              <label
+                htmlFor="assignee_id"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Assign To *
+              </label>
+              <select
+                id="assignee_id"
+                name="assignee_id"
+                value={formData.assignee_id}
+                onChange={handleChange}
+                className={`input w-full ${
+                  validationErrors.assignee_id
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+                required
+              >
+                <option value="">Select an assignee</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.full_name || user.email}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.assignee_id && (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.assignee_id}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Deadline Field - Required */}
+          <div>
+            <label
+              htmlFor="deadline"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Deadline *
+              {getMilestoneDeadline() && (
+                <span className="text-xs text-gray-500 ml-2">
+                  (Must be before{" "}
+                  {new Date(getMilestoneDeadline()).toLocaleDateString()})
+                </span>
+              )}
+            </label>
+            <input
+              type="date"
+              id="deadline"
+              name="deadline"
+              value={formData.deadline}
+              onChange={handleChange}
+              min={initialData ? undefined : getTodayDate()} // Only restrict for new tasks
+              max={getMilestoneDeadline() || undefined}
+              className={`input w-full ${
+                validationErrors.deadline
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
+              required
+            />
+            {validationErrors.deadline && (
+              <p className="mt-1 text-sm text-red-600">
+                {validationErrors.deadline}
+              </p>
+            )}
+            {!validationErrors.deadline && (
+              <p className="mt-1 text-sm text-gray-500">
+                {initialData
+                  ? "Task deadline"
+                  : "Select a date on or after today"}
+                {getMilestoneDeadline() && ` and before milestone deadline`}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Suggestions Section (Always Optional) */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <div>
+          <label
+            htmlFor="suggestions"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Suggestions & Notes
+            {formData.suggestions.length > 0 && (
+              <span className="text-xs text-gray-500 ml-2">
+                ({formData.suggestions.length}/2000 characters)
+              </span>
+            )}
+          </label>
+          <textarea
+            id="suggestions"
+            name="suggestions"
+            rows="4"
+            value={formData.suggestions}
+            onChange={handleChange}
+            className={`input resize-none w-full ${
+              validationErrors.suggestions
+                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                : ""
+            }`}
+            placeholder="Enter suggestions, notes, or additional requirements..."
+            maxLength={2000}
+          />
+          {validationErrors.suggestions && (
+            <p className="mt-1 text-sm text-red-600">
+              {validationErrors.suggestions}
+            </p>
           )}
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          rows="3"
-          value={formData.description}
-          onChange={handleChange}
-          className={`input resize-none w-full ${
-            validationErrors.description
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-              : ""
-          }`}
-          placeholder="Describe the task (optional)..."
-          maxLength={1000}
-        />
-        {validationErrors.description && (
-          <p className="mt-1 text-sm text-red-600">
-            {validationErrors.description}
+          <p className="mt-1 text-sm text-gray-500">
+            Suggestions will be recorded under your name:{" "}
+            {users.find((u) => u.id === user?.id)?.full_name || user?.email}
           </p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Status Field - REQUIRED with default */}
-        <div>
-          <label
-            htmlFor="status"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Status
-          </label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="input"
-          >
-            <option value="todo">To Do</option>
-            <option value="in-progress">In Progress</option>
-            <option value="review">Review</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-
-        {/* Priority Field - REQUIRED with default */}
-        <div>
-          <label
-            htmlFor="priority"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Priority
-          </label>
-          <select
-            id="priority"
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            className="input"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Milestone Field - OPTIONAL */}
-        <div>
-          <label
-            htmlFor="milestone_id"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Milestone (Optional)
-          </label>
-          <select
-            id="milestone_id"
-            name="milestone_id"
-            value={formData.milestone_id}
-            onChange={handleChange}
-            className="input w-full"
-          >
-            <option value="">No milestone</option>
-            {milestones.map((milestone) => (
-              <option key={milestone.id} value={milestone.id}>
-                {milestone.name}
-                {milestone.deadline &&
-                  ` (Due: ${new Date(
-                    milestone.deadline
-                  ).toLocaleDateString()})`}
-              </option>
-            ))}
-          </select>
+      {/* Feedback Section (Only shown when status is "review" or feedback already exists) */}
+      {showFeedbackSection && (
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div>
+            <label
+              htmlFor="feedback"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Feedback
+              {formData.feedback.length > 0 && (
+                <span className="text-xs text-gray-500 ml-2">
+                  ({formData.feedback.length}/2000 characters)
+                </span>
+              )}
+            </label>
+            <textarea
+              id="feedback"
+              name="feedback"
+              rows="4"
+              value={formData.feedback}
+              onChange={handleChange}
+              className={`input resize-none w-full ${
+                validationErrors.feedback
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
+              placeholder="Provide feedback on this task... (Optional)"
+              maxLength={2000}
+            />
+            {validationErrors.feedback && (
+              <p className="mt-1 text-sm text-red-600">
+                {validationErrors.feedback}
+              </p>
+            )}
+            {formData.status === "review" && (
+              <p className="mt-1 text-sm text-blue-600">
+                Task is in review. You can optionally provide feedback.
+              </p>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Assignee Field - OPTIONAL */}
-        <div>
-          <label
-            htmlFor="assignee_id"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Assign To
-          </label>
-          <select
-            id="assignee_id"
-            name="assignee_id"
-            value={formData.assignee_id}
-            onChange={handleChange}
-            className="input"
-          >
-            <option value="">Unassigned</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.full_name || user.email}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Deadline Field - OPTIONAL */}
-      <div>
-        <label
-          htmlFor="deadline"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Deadline (Optional)
-          {formData.milestone_id && getMilestoneDeadline() && (
-            <span className="text-xs text-gray-500 ml-2">
-              (Must be before{" "}
-              {new Date(getMilestoneDeadline()).toLocaleDateString()})
-            </span>
-          )}
-        </label>
-        <input
-          type="date"
-          id="deadline"
-          name="deadline"
-          value={formData.deadline}
-          onChange={handleChange}
-          min={getTodayDate()}
-          max={getMilestoneDeadline() || undefined}
-          className={`input ${
-            validationErrors.deadline
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-              : ""
-          }`}
-        />
-        {validationErrors.deadline && (
-          <p className="mt-1 text-sm text-red-600">
-            {validationErrors.deadline}
+      {/* Info message when status is not review but task has feedback */}
+      {formData.feedback && formData.status !== "review" && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg">
+          <p className="text-sm">
+            This task has feedback from a previous review. To add new feedback,
+            change status to "review".
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Submit Buttons */}
       <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -431,10 +684,10 @@ export default function TaskForm({
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary px-4 py-2 text-sm font-medium"
+          className="btn-primary px-4 py-2 text-sm font-medium flex items-center"
         >
           {loading ? (
-            <span className="flex items-center">
+            <>
               <svg
                 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                 xmlns="http://www.w3.org/2000/svg"
@@ -456,7 +709,7 @@ export default function TaskForm({
                 ></path>
               </svg>
               {initialData ? "Updating..." : "Creating..."}
-            </span>
+            </>
           ) : initialData ? (
             "Update Task"
           ) : (

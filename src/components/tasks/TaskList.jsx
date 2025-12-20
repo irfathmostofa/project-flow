@@ -38,7 +38,9 @@ export default function TaskList({ projectId, milestoneId }) {
       let query = supabase.from("tasks").select(`
           *,
           assignee:users(full_name, email),
-          milestone:milestones(name)
+          milestone:milestones(name),
+          suggestion_by_user:users(full_name, email),
+          feedback_by_user:users(full_name, email)
         `);
 
       if (projectId) {
