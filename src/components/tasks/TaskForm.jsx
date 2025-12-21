@@ -594,7 +594,47 @@ export default function TaskForm({
           </p>
         </div>
       </div>
-
+      {showFeedbackSection && (
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div>
+            <label
+              htmlFor="feedback"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Feedback
+              {formData.feedback.length > 0 && (
+                <span className="text-xs text-gray-500 ml-2">
+                  ({formData.feedback.length}/2000 characters)
+                </span>
+              )}
+            </label>
+            <textarea
+              id="feedback"
+              name="feedback"
+              rows="4"
+              value={formData.feedback}
+              onChange={handleChange}
+              className={`input resize-none w-full ${
+                validationErrors.feedback
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
+              placeholder="Provide feedback on this task... (Optional)"
+              maxLength={2000}
+            />
+            {validationErrors.feedback && (
+              <p className="mt-1 text-sm text-red-600">
+                {validationErrors.feedback}
+              </p>
+            )}
+            {formData.status === "review" && (
+              <p className="mt-1 text-sm text-blue-600">
+                Task is in review. You can optionally provide feedback.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
       {/* Info message when status is not review but task has feedback */}
       {formData.feedback && formData.status !== "review" && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg">
