@@ -104,7 +104,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 p-2">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 ">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Alerts */}
         {error && (

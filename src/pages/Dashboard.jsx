@@ -153,7 +153,7 @@ export default function Dashboard() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-2">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 ">
       <div className="max-w-ful mx-auto space-y-8">
         {/* Header */}
         <div className="grid grid-cols-1 lg:grid-cols-2 items-center">

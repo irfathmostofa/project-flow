@@ -137,7 +137,7 @@ export default function ProjectDetail() {
   const statusConfig = getStatusConfig(project.status);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-2">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-full mx-auto space-y-6">
         {/* Project Header */}
         <div className="relative bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
