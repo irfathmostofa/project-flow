@@ -417,29 +417,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Quick Actions */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center">
-                  <Zap className="h-5 w-5 mr-2 text-yellow-500" />
-                  Quick Actions
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <Link
-                    to="/projects"
-                    className="group flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-100 hover:border-blue-300 text-blue-700 rounded-xl hover:shadow-md transition-all text-sm font-semibold"
-                  >
-                    <FolderKanban className="h-5 w-5 mr-2 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                    <span className="truncate">New Project</span>
-                  </Link>
-                  <Link
-                    to="/projects"
-                    className="group flex items-center justify-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-100 hover:border-green-300 text-green-700 rounded-xl hover:shadow-md transition-all text-sm font-semibold"
-                  >
-                    <Target className="h-5 w-5 mr-2 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                    <span className="truncate">View Tasks</span>
-                  </Link>
-                </div>
-              </div>
             </div>
           </div>
         </div>
