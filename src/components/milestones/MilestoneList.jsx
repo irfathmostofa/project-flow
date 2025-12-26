@@ -578,7 +578,6 @@ export default function MilestoneList({ projectId }) {
                       </div>
                     </div>
                   </div>
-
                   {/* Expanded tasks section */}
                   {isExpanded && (
                     <div className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-slate-50 p-4 sm:p-6">
@@ -588,7 +587,6 @@ export default function MilestoneList({ projectId }) {
                       />
                     </div>
                   )}
-
                   {/* Hover Effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 </div>
