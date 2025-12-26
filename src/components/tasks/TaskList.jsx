@@ -249,7 +249,7 @@ export default function TaskList({ projectId, milestoneId }) {
               <span>{showFilters ? "Hide" : "Filters"}</span>
             </button>
 
-            <button
+            {/* <button
               onClick={() => {
                 setEditingTask(null);
                 setIsModalOpen(true);
@@ -259,7 +259,7 @@ export default function TaskList({ projectId, milestoneId }) {
               <Plus className="h-4 w-4" />
               <span className="hidden md:inline">Add Task</span>
               <span className="md:hidden">Add</span>
-            </button>
+            </button> */}
           </div>
 
           {/* Mobile Menu Button */}
@@ -580,6 +580,17 @@ export default function TaskList({ projectId, milestoneId }) {
 
                   {/* Tasks */}
                   <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                    {/* Add Task Button */}
+                    <button
+                      onClick={() => {
+                        setEditingTask(null);
+                        setIsModalOpen(true);
+                      }}
+                      className="w-full  p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add task</span>
+                    </button>
                     {statusTasks.map((task) => (
                       <TaskCard
                         key={task.id}
@@ -601,18 +612,6 @@ export default function TaskList({ projectId, milestoneId }) {
                       </div>
                     )}
                   </div>
-
-                  {/* Add Task Button */}
-                  <button
-                    onClick={() => {
-                      setEditingTask(null);
-                      setIsModalOpen(true);
-                    }}
-                    className="w-full mt-4 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 text-sm font-medium transition-all flex items-center justify-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add task</span>
-                  </button>
                 </div>
               );
             })}
