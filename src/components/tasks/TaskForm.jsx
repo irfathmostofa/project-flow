@@ -561,7 +561,7 @@ export default function TaskForm({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Assign To (Optional) - {selectedAssignees.length} selected
             </label>
-            <div className="space-y-2">
+            <div className="flex gap-2 flex-wrap">
               {users.map((userItem) => (
                 <label
                   key={userItem.id}

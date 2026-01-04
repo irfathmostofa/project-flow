@@ -416,7 +416,7 @@ export default function TaskList({ projectId, milestoneId }) {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingTask ? "Edit Task" : "Create New Task"}
-        size="lg"
+        size="4xl"
       >
         <TaskForm
           projectId={projectId}
