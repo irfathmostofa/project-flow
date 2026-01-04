@@ -14,6 +14,8 @@ import Profile from "./pages/Profile";
 import Layout from "./components/layout/Layout";
 import { ToastProvider } from "./context/ToastContext";
 import ToastContainer from "./components/ui/Toast";
+import TaskList from "./components/tasks/TaskList";
+import TaskPage from "./pages/TaskPage";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -109,6 +111,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <Profile />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <TaskPage />
                   </Layout>
                 </PrivateRoute>
               }

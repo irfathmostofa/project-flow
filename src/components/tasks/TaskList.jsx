@@ -186,7 +186,7 @@ export default function TaskList({ projectId, milestoneId }) {
     completed: tasks.filter((t) => t.status === "completed"),
   };
 
-  const statusConfig = {
+   const statusConfig = {
     todo: {
       title: "To Do",
       icon: Circle,

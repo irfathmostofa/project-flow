@@ -9,7 +9,7 @@ import {
   Menu,
   X,
   PlusCircle,
-  Bell,
+  LucideTableProperties,
 } from "lucide-react";
 import Modal from "../ui/Modal";
 import ProjectForm from "../projects/ProjectForm";
@@ -45,6 +45,7 @@ export default function Header() {
   const menuItems = [
     { to: "/dashboard", icon: Home, label: "Dashboard" },
     { to: "/projects", icon: FolderKanban, label: "Projects" },
+    { to: "/tasks", icon: LucideTableProperties, label: "Tasks" },
     { to: "/profile", icon: User, label: "Profile" },
   ];
 
@@ -59,7 +60,7 @@ export default function Header() {
         setIsModalOpen(true);
       },
     },
-    { to: "/notifications", icon: Bell, label: "Alerts" },
+    { to: "/tasks", icon: LucideTableProperties, label: "Tasks" },
     { to: "/profile", icon: User, label: "Profile" },
   ];
 
