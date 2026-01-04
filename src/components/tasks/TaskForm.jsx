@@ -389,14 +389,14 @@ export default function TaskForm({
     <form onSubmit={handleSubmit} className="space-y-2">
       {/* Error Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-2 md:px-4 py-3 rounded-lg">
           <strong className="font-medium">Error:</strong> {error}
         </div>
       )}
 
       {/* Form-level validation errors */}
       {Object.keys(validationErrors).length > 0 && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-2 md:px-4 py-3 rounded-lg">
           <p className="font-medium mb-2">Please fix the following errors:</p>
           <ul className="list-disc list-inside text-sm space-y-1">
             {Object.values(validationErrors)

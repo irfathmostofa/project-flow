@@ -240,10 +240,10 @@ export default function Dashboard() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
-      <div className="max-w-full mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-1 md:p-4">
+      <div className="max-w-full mx-auto space-y-4">
         {/* Header */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           {/* Dashboard Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -259,7 +259,7 @@ export default function Dashboard() {
             {/* Progress Badge */}
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm text-gray-600">Progress</p>
+                <p className="text-sm text-gray-600">Overall Progress</p>
                 <p className="text-lg font-semibold text-gray-900">
                   {completionRate}% complete
                 </p>
@@ -271,7 +271,7 @@ export default function Dashboard() {
           <div className="sm:hidden bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">
-                Task Progress: {stats.completedTasks}/{stats.totalTasks}
+                Overall Progress: {stats.completedTasks}/{stats.totalTasks}
               </span>
               <span className="text-sm font-semibold text-blue-600">
                 {completionRate}%
@@ -279,7 +279,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {statCards.map((stat, index) => {
@@ -298,7 +297,7 @@ export default function Dashboard() {
                   {/* Left side: Icon and title */}
                   <div className="flex items-center space-x-4">
                     <div
-                      className={`p-2.5 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
+                      className={`hidden md:block p-2.5 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
                     >
                       <Icon className="h-5 w-5 text-gray-700" />
                     </div>
@@ -332,11 +331,11 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-100 to-indigo-100 px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-1 md:space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <FolderKanban className="h-5 w-5 text-blue-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900">
                     Recent Projects
                   </h2>
                 </div>
@@ -350,7 +349,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-1 md:p-6 ">
               <div className="space-y-4">
                 {recentProjects.length === 0 ? (
                   <div className="text-center py-12">
@@ -416,11 +415,11 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-1 md:space-x-3">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <Clock className="h-5 w-5 text-purple-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900">
                     Upcoming Deadlines
                   </h2>
                 </div>

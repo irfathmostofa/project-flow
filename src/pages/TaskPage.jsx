@@ -454,7 +454,7 @@ export default function TaskPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-full mx-auto px-4 py-8">
+      <div className="max-w-full mx-auto px-2 md:px-4 py-2 md:py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -475,7 +475,7 @@ export default function TaskPage() {
             {selectedProject && (
               <button
                 onClick={handleCreateTask}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-shadow flex items-center gap-2"
+                className="px-2 md:px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-shadow flex items-center gap-2"
               >
                 <Plus className="h-5 w-5" />
                 New Task
@@ -485,7 +485,7 @@ export default function TaskPage() {
 
           {/* Project Selector (always shown in global task view) */}
           {isGlobalTaskView && (
-            <div className="mb-6">
+            <div className="mb-2 md:mb-6">
               <div className="flex items-center gap-3 mb-3">
                 <FolderKanban className="h-5 w-5 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">
@@ -524,68 +524,7 @@ export default function TaskPage() {
 
           {/* Show stats and tasks only when a project is selected */}
           {selectedProject ? (
-            <>
-              {/* Stats (only shown when project is selected) */}
-              {tasks.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Total Tasks</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                          {stats.total}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <Layers className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">In Progress</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {stats.inProgress}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <Clock className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Completed</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          {stats.completed}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Overdue</p>
-                        <p className="text-2xl font-bold text-red-600">
-                          {stats.overdue}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-red-50 rounded-lg">
-                        <AlertCircle className="h-6 w-6 text-red-600" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+            <></>
           ) : (
             // Show "Select Project" message when no project is selected
             isGlobalTaskView && (
@@ -620,28 +559,6 @@ export default function TaskPage() {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4 flex-wrap">
                   {/* View Toggle */}
-                  <div className="flex bg-gray-100 p-1 rounded-lg">
-                    <button
-                      onClick={() => setViewMode("kanban")}
-                      className={`px-4 py-2 rounded-md transition-colors ${
-                        viewMode === "kanban"
-                          ? "bg-white shadow-sm text-blue-600"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      <Grid className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`px-4 py-2 rounded-md transition-colors ${
-                        viewMode === "list"
-                          ? "bg-white shadow-sm text-blue-600"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      <List className="h-5 w-5" />
-                    </button>
-                  </div>
 
                   {/* Filter Toggle */}
                   <button
@@ -878,11 +795,11 @@ export default function TaskPage() {
                             </div>
 
                             {/* Tasks */}
-                            <div className="p-3 space-y-2">
+                            <div className="space-y-2 p-2">
                               {statusTasks.map((task) => (
                                 <div
                                   key={task.id}
-                                  className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
+                                  className="border border-gray-200 rounded-lg  hover:border-blue-300 transition-colors"
                                 >
                                   <TaskCard
                                     task={task}
@@ -1018,7 +935,7 @@ export default function TaskPage() {
             {/* Mobile Floating Button */}
             <button
               onClick={handleCreateTask}
-              className="fixed bottom-6 right-6 sm:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transition-all z-40"
+              className="fixed bottom-20 right-6 sm:hidden h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transition-all z-40"
               aria-label="Add Task"
             >
               <Plus className="h-6 w-6" />

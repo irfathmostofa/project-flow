@@ -334,7 +334,7 @@ export default function ProjectList() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 ">
       <div className="max-w-full mx-auto space-y-6">
         {/* Header Section */}
-        <div className="relative bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-6 sm:p-8">
+        <div className="relative bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 sm:p-8">
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
@@ -342,7 +342,7 @@ export default function ProjectList() {
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                     Projects
                   </h1>
                   <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
@@ -389,10 +389,10 @@ export default function ProjectList() {
           </div>
 
           {/* Project Type Tabs */}
-          <div className="mt-6 flex border-b border-gray-200">
+          <div className="mt-2 not-even:md:mt-6 flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+              className={`px-1 md:px-4 py-2 text-xs md:text-sm font-medium transition-colors relative ${
                 activeTab === "all"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -408,7 +408,7 @@ export default function ProjectList() {
             </button>
             <button
               onClick={() => setActiveTab("owned")}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+              className={`px-1 md:px-4 py-2 text-xs md:text-sm transition-colors relative ${
                 activeTab === "owned"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -424,7 +424,7 @@ export default function ProjectList() {
             </button>
             <button
               onClick={() => setActiveTab("shared")}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+              className={`px-1 md:px-4 py-2 text-xs md:text-sm transition-colors relative ${
                 activeTab === "shared"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"

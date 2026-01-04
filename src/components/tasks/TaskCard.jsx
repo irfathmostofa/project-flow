@@ -53,7 +53,7 @@ export default function TaskCard({
   // Compact view
   if (compact) {
     return (
-      <div className="group relative bg-gradient-to-br from-white to-gray-50 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200">
+      <div className="group relative bg-gradient-to-br from-white to-gray-50 p-2 md:p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200">
         <div className="flex items-start space-x-3">
           <div className="min-w-0 flex-1">
             <h4
@@ -153,26 +153,17 @@ export default function TaskCard({
         </div>
 
         {/* Quick Status Change on Hover */}
-        <div className="mt-3 pt-3 border-t border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex gap-1">
-            {["todo", "in-progress", "review", "completed"].map((status) => (
-              <button
-                key={status}
-                onClick={() => onStatusChange?.(task.id, status)}
-                className={`flex-1 text-xs px-2 py-1 rounded-md font-medium transition-colors ${
-                  task.status === status
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-                title={status.replace("-", " ")}
-              >
-                {status === "todo" && "📋"}
-                {status === "in-progress" && "⏳"}
-                {status === "review" && "👀"}
-                {status === "completed" && "✅"}
-              </button>
-            ))}
-          </div>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <select
+            value={task.status}
+            onChange={(e) => onStatusChange?.(task.id, e.target.value)}
+            className="w-full text-xs px-2 py-1 rounded-md font-medium border border-gray-300 bg-white text-gray-700 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todo">📋 Todo</option>
+            <option value="in-progress">⏳ In Progress</option>
+            <option value="review">👀 Review</option>
+            <option value="completed">✅ Completed</option>
+          </select>
         </div>
 
         {/* Details Modal for Compact View */}

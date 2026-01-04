@@ -196,7 +196,7 @@ export default function ProjectDetail() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              <div className="group p-5 bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-md transition-all">
+              <div className="group p-2 md:p-5 bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-md transition-all">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-blue-100 rounded-xl group-hover:scale-110 transition-transform">
                     <Calendar className="h-6 w-6 text-blue-600" />
@@ -212,7 +212,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
 
-              <div className="group p-5 bg-linear-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-md transition-all">
+              <div className="group p-2 md:p-5 bg-linear-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-md transition-all">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-green-100 rounded-xl group-hover:scale-110 transition-transform">
                     <Target className="h-6 w-6 text-green-600" />
@@ -226,7 +226,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
 
-              <div className="group p-5 bg-linear-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all">
+              <div className="group p-2 md:p-5 bg-linear-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-purple-100 rounded-xl group-hover:scale-110 transition-transform">
                     <Clock className="h-6 w-6 text-purple-600" />
@@ -275,7 +275,7 @@ export default function ProjectDetail() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`group relative py-4 px-6 font-bold text-sm whitespace-nowrap transition-all flex items-center space-x-2 ${
+                    className={`group relative py-4 px-2 md:px-6 font-bold text-sm whitespace-nowrap transition-all flex items-center space-x-2 ${
                       activeTab === tab.key
                         ? "text-blue-600"
                         : "text-gray-500 hover:text-gray-700"
@@ -298,7 +298,7 @@ export default function ProjectDetail() {
             </nav>
           </div>
 
-          <div className="p-1 sm:p-6">
+          <div className="p-2 md:p-1 sm:p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <MilestoneList projectId={project.id} />

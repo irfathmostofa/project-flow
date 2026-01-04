@@ -64,7 +64,7 @@ export default function Modal({
           className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all`}
         >
           {/* Header */}
-          <div className="bg-white px-6 pt-6 pb-4">
+          <div className="bg-white px-2 md:px-6 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold leading-6 text-gray-900">
                 {title}
@@ -83,7 +83,7 @@ export default function Modal({
           </div>
 
           {/* Content */}
-          <div className="px-6 pb-6">{children}</div>
+          <div className="px-2 md:px-6 pb-6">{children}</div>
         </div>
       </div>
     </div>

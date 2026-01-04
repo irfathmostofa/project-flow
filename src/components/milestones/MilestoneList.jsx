@@ -292,50 +292,50 @@ export default function MilestoneList({ projectId }) {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-2 md:p-4  sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 mb-1">
-                    Total Milestones
+                    Milestones
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  <p className="text-lg sm:text-3xl font-bold text-gray-900">
                     {milestones.length}
                   </p>
                 </div>
-                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl">
+                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl hidden sm:flex">
                   <Target className="h-5 sm:h-6 w-5 sm:w-6 text-blue-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-2 md:p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 mb-1">
                     Completed
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-green-600">
+                  <p className="text-lg sm:text-3xl font-bold text-green-600">
                     {completedCount}
                   </p>
                 </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-lg sm:rounded-xl">
+                <div className="p-2 sm:p-3 bg-green-100 rounded-lg sm:rounded-xl hidden sm:flex">
                   <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow col-span-1 sm:col-span-2 lg:col-span-1">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-2 md:p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow col-span-1 sm:col-span-2 lg:col-span-1">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 mb-1">
                     In Progress
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">
+                  <p className="text-lg sm:text-3xl font-bold text-blue-600">
                     {inProgressCount}
                   </p>
                 </div>
-                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl">
+                <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl hidden sm:flex">
                   <TrendingUp className="h-5 sm:h-6 w-5 sm:w-6 text-blue-600" />
                 </div>
               </div>
