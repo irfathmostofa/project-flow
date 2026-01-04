@@ -13,10 +13,14 @@ import {
   Activity,
   ArrowRight,
   Sparkles,
+  Users,
+  Layers,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalProjects: 0,
     activeProjects: 0,
@@ -30,52 +34,103 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
-      const { data: projects } = await supabase
+      setLoading(true);
+
+      // Fetch user's projects (owned and where they are a member)
+      const { data: ownedProjects } = await supabase
         .from("projects")
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .eq("owner_id", user.id);
 
-      const { data: tasks } = await supabase.from("tasks").select("*");
+      // Fetch projects where user is a member
+      const { data: memberProjects } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", user.id);
 
+      const memberProjectIds = memberProjects?.map((m) => m.project_id) || [];
+
+      let allProjects = [...(ownedProjects || [])];
+
+      // Get details for member projects
+      if (memberProjectIds.length > 0) {
+        const { data: memberProjectDetails } = await supabase
+          .from("projects")
+          .select("*")
+          .in("id", memberProjectIds);
+
+        // Filter out duplicates (projects user already owns)
+        const uniqueMemberProjects = (memberProjectDetails || []).filter(
+          (project) => !ownedProjects?.some((owned) => owned.id === project.id)
+        );
+
+        allProjects = [...allProjects, ...uniqueMemberProjects];
+      }
+
+      // Get all tasks from user's projects
+      const projectIds = allProjects.map((p) => p.id);
+      let allTasks = [];
+
+      if (projectIds.length > 0) {
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("*, task_assignees!left(user_id)")
+          .in("project_id", projectIds);
+
+        allTasks = tasks || [];
+      }
+
+      // Get tasks where user is assigned (through task_assignees)
+      const { data: assignedTasksData } = await supabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", user.id);
+
+      const assignedTaskIds = assignedTasksData?.map((t) => t.task_id) || [];
+
+      // Get details for assigned tasks
+      let assignedTasks = [];
+      if (assignedTaskIds.length > 0) {
+        const { data: assignedTaskDetails } = await supabase
+          .from("tasks")
+          .select("*")
+          .in("id", assignedTaskIds);
+
+        assignedTasks = assignedTaskDetails || [];
+      }
+
+      // Combine all tasks (from projects + directly assigned)
+      const combinedTasks = [...allTasks, ...assignedTasks];
+
+      // Remove duplicates
+      const uniqueTasks = Array.from(
+        new Map(combinedTasks.map((task) => [task.id, task])).values()
+      );
+
+      // Calculate overdue tasks
       const today = new Date().toISOString().split("T")[0];
-      const { data: overdueTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .lt("deadline", today)
-        .neq("status", "completed");
+      const overdueTasks = uniqueTasks.filter(
+        (task) =>
+          task.deadline && task.deadline < today && task.status !== "completed"
+      );
 
-      const totalProjects = projects?.length || 0;
+      // Calculate stats
+      const totalProjects = allProjects.length || 0;
       const activeProjects =
-        projects?.filter((p) => p.status === "active").length || 0;
-      const totalTasks = tasks?.length || 0;
+        allProjects.filter((p) => p.status === "active").length || 0;
+      const totalTasks = uniqueTasks.length || 0;
       const completedTasks =
-        tasks?.filter((t) => t.status === "completed").length || 0;
-      const overdueTasksCount = overdueTasks?.length || 0;
+        uniqueTasks.filter((t) => t.status === "completed").length || 0;
+      const overdueTasksCount = overdueTasks.length || 0;
 
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      const nextWeekStr = nextWeek.toISOString().split("T")[0];
-
-      const { data: deadlines } = await supabase
-        .from("tasks")
-        .select(
-          `
-          *,
-          project:projects(name)
-        `
-        )
-        .gte("deadline", today)
-        .lte("deadline", nextWeekStr)
-        .neq("status", "completed")
-        .order("deadline", { ascending: true })
-        .limit(5);
-
+      // Update stats
       setStats({
         totalProjects,
         activeProjects,
@@ -84,8 +139,40 @@ export default function Dashboard() {
         overdueTasks: overdueTasksCount,
       });
 
-      setRecentProjects(projects || []);
-      setUpcomingDeadlines(deadlines || []);
+      // Get recent projects (last 5)
+      setRecentProjects(allProjects.slice(0, 5));
+
+      // Get upcoming deadlines (next 7 days)
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      const nextWeekStr = nextWeek.toISOString().split("T")[0];
+
+      // Get tasks with deadlines in next 7 days that are not completed
+      const upcomingTasks = uniqueTasks.filter(
+        (task) =>
+          task.deadline &&
+          task.deadline >= today &&
+          task.deadline <= nextWeekStr &&
+          task.status !== "completed"
+      );
+
+      // Get project names for upcoming tasks
+      const upcomingDeadlinesWithProjects = await Promise.all(
+        upcomingTasks.slice(0, 5).map(async (task) => {
+          const { data: project } = await supabase
+            .from("projects")
+            .select("name")
+            .eq("id", task.project_id)
+            .single();
+
+          return {
+            ...task,
+            project: project || { name: "Unknown Project" },
+          };
+        })
+      );
+
+      setUpcomingDeadlines(upcomingDeadlinesWithProjects);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -113,7 +200,7 @@ export default function Dashboard() {
     {
       title: "Total Tasks",
       value: stats.totalTasks,
-      icon: Activity,
+      icon: Layers,
       gradient: "from-purple-500 to-pink-600",
       bgColor: "bg-purple-50",
       iconBg: "bg-purple-100",
@@ -153,70 +240,54 @@ export default function Dashboard() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 ">
-      <div className="max-w-ful mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
+      <div className="max-w-full mx-auto space-y-8">
         {/* Header */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 items-center">
-          <div className="relative">
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-400 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute -top-4 -right-4 w-32 h-32 bg-purple-400 rounded-full opacity-20 blur-3xl"></div>
-
-            <div className="relative">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
-                  <Zap className="h-6 w-6 text-white" />
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                  Dashboard
-                </h1>
-                <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
+        <div className="space-y-4">
+          {/* Dashboard Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3">
+                <Zap className="h-6 w-6 text-blue-600" />
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               </div>
-              <p className="text-gray-600 ml-0 sm:ml-16">
-                Welcome back! Here's your productivity overview
+              <p className="text-gray-600 text-sm mt-1">
+                Welcome back! Here's your overview
               </p>
             </div>
-          </div>
-          <div className="bg-linear-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl p-4 sm:p-2 text-white">
-            <div className="flex flex-col sm:flex-row lg:items-center md:items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4">
-                <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
-                  <TrendingUp className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <p className="text-blue-100 text-sm font-medium m-0">
-                    Overall Progress
-                  </p>
-                  <p className=" text-md sm:text-2xl font-bold">
-                    {completionRate}%
-                  </p>
-                  <p className="text-blue-100 text-sm">
-                    {stats.completedTasks} of {stats.totalTasks} tasks completed
-                  </p>
-                </div>
-              </div>
 
-              <div className="w-full sm:w-64">
-                <div className="h-4 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                  <div
-                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 relative"
-                    style={{ width: `${completionRate}%` }}
-                  >
-                    <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
-                  </div>
-                </div>
+            {/* Progress Badge */}
+            <div className="flex items-center space-x-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm text-gray-600">Progress</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {completionRate}% complete
+                </p>
               </div>
+            </div>
+          </div>
+
+          {/* Progress Bar - Mobile Friendly */}
+          <div className="sm:hidden bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Task Progress: {stats.completedTasks}/{stats.totalTasks}
+              </span>
+              <span className="text-sm font-semibold text-blue-600">
+                {completionRate}%
+              </span>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
-                className="group relative bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
+                className="group relative bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
               >
                 {/* Background gradient */}
                 <div
@@ -225,26 +296,22 @@ export default function Dashboard() {
 
                 <div className="relative flex items-center justify-between">
                   {/* Left side: Icon and title */}
-                  <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="flex items-center space-x-4">
                     <div
-                      className={`p-2 sm:p-2.5 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
+                      className={`p-2.5 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform`}
                     >
-                      <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" />
+                      <Icon className="h-5 w-5 text-gray-700" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-600">
+                      <p className="text-sm font-medium text-gray-600">
                         {stat.title}
-                      </p>
-                      {/* Value for mobile - shown below on small screens */}
-                      <p className="sm:hidden text-lg font-bold text-gray-900 mt-1">
-                        {stat.value}
                       </p>
                     </div>
                   </div>
 
-                  {/* Right side: Value (hidden on mobile, shown above) */}
+                  {/* Right side: Value */}
                   <p
-                    className={`hidden sm:block text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
+                    className={`text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
                   >
                     {stat.value}
                   </p>
@@ -259,12 +326,11 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Completion Rate Card */}
-
+        {/* Recent Projects & Upcoming Deadlines */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Projects */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-linear-to-r from-blue-100 to-indigo-100 lg:px-6 md:px-4 px-2 py-4 border-b border-gray-100">
+            <div className="bg-gradient-to-r from-blue-100 to-indigo-100 px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -284,8 +350,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="lg:px-6 md:px-4 px-2 py-4">
-              <div className="space-y-3">
+            <div className="p-6">
+              <div className="space-y-4">
                 {recentProjects.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -312,6 +378,11 @@ export default function Dashboard() {
                           <h3 className="font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                             {project.name}
                           </h3>
+                          {project.description && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                              {project.description}
+                            </p>
+                          )}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <span
                               className={`text-xs px-3 py-1 rounded-full font-semibold border ${
@@ -343,24 +414,24 @@ export default function Dashboard() {
 
           {/* Upcoming Deadlines */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-100">
+            <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <Clock className="h-5 w-5 text-purple-600" />
                   </div>
-                  <h2 className="text-md md:text-xl lg:text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900">
                     Upcoming Deadlines
                   </h2>
                 </div>
-                <span className="text-xs font-semibold text-gray-600 bg-white px-1 py-1 rounded-full">
+                <span className="text-xs font-semibold text-gray-600 bg-white px-3 py-1 rounded-full">
                   Next 7 days
                 </span>
               </div>
             </div>
 
             <div className="p-6">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {upcomingDeadlines.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -370,15 +441,21 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   upcomingDeadlines.map((task) => (
-                    <div
+                    <Link
                       key={task.id}
-                      className="group p-4 border-2 border-gray-100 hover:border-purple-200 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all"
+                      to={`/projects/${task.project_id}`}
+                      className="group block p-4 border-2 border-gray-100 hover:border-purple-200 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all"
                     >
                       <div className="flex items-start justify-between space-x-3">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 truncate">
+                          <h3 className="font-bold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
                             {task.title}
                           </h3>
+                          {task.description && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                              {task.description}
+                            </p>
+                          )}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <span
                               className={`text-xs px-3 py-1 rounded-full font-semibold border ${
@@ -391,32 +468,26 @@ export default function Dashboard() {
                                   : "bg-green-100 text-green-700 border-green-200"
                               }`}
                             >
-                              {task.priority.toUpperCase()}
+                              {task.priority?.toUpperCase() || "MEDIUM"}
                             </span>
-                            <span className="text-xs text-gray-600 truncate bg-gray-100 px-2 py-1 rounded-full">
+                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                               {task.project?.name || "Unknown"}
                             </span>
                           </div>
-                          {task.description && (
-                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                              {task.description}
-                            </p>
-                          )}
                         </div>
                         <div className="text-right flex-shrink-0">
                           <div className="text-sm font-bold text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">
                             {format(new Date(task.deadline), "MMM d")}
                           </div>
                           <div className="text-xs text-gray-600 capitalize mt-1">
-                            {task.status.replace("-", " ")}
+                            {task.status?.replace("-", " ") || "todo"}
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>
-
             </div>
           </div>
         </div>

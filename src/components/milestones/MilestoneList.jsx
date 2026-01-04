@@ -21,6 +21,7 @@ import MilestoneForm from "./MilestoneForm";
 import TaskList from "../tasks/TaskList";
 import Modal from "../ui/Modal";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function MilestoneList({ projectId }) {
   const [milestones, setMilestones] = useState([]);
@@ -29,7 +30,7 @@ export default function MilestoneList({ projectId }) {
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(null);
-
+  const { user } = useAuth();
   const [deletingId, setDeletingId] = useState(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
   const [expandingId, setExpandingId] = useState(null);
@@ -43,24 +44,49 @@ export default function MilestoneList({ projectId }) {
 
   const fetchMilestones = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      // Query milestones
+      const { data: milestonesData, error: milestonesError } = await supabase
         .from("milestones")
-        .select(
-          `
-          *,
-          tasks (count)
-        `
-        )
+        .select("*")
         .eq("project_id", projectId)
         .order("deadline", { ascending: true });
 
-      if (error) throw error;
+      if (milestonesError) throw milestonesError;
 
-      setMilestones(data || []);
+      if (!milestonesData || milestonesData.length === 0) {
+        setMilestones([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get task counts for each milestone
+      const milestoneIds = milestonesData.map((m) => m.id);
+
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks")
+        .select("milestone_id")
+        .in("milestone_id", milestoneIds);
+
+      if (tasksError) throw tasksError;
+
+      // Count tasks per milestone
+      const taskCounts = {};
+      tasksData?.forEach((task) => {
+        if (task.milestone_id) {
+          taskCounts[task.milestone_id] =
+            (taskCounts[task.milestone_id] || 0) + 1;
+        }
+      });
+
+      // Combine milestones with task counts
+      const milestonesWithCounts = milestonesData.map((milestone) => ({
+        ...milestone,
+        task_count: taskCounts[milestone.id] || 0,
+      }));
+
+      setMilestones(milestonesWithCounts);
     } catch (error) {
       console.error("Error fetching milestones:", error);
-      toast.error("Failed to load milestones");
     } finally {
       setLoading(false);
     }
@@ -76,12 +102,21 @@ export default function MilestoneList({ projectId }) {
 
     try {
       setDeletingId(id);
+
+      // First, unassign all tasks from this milestone
+      await supabase
+        .from("tasks")
+        .update({ milestone_id: null })
+        .eq("milestone_id", id);
+
+      // Then delete the milestone
       const { error } = await supabase.from("milestones").delete().eq("id", id);
 
       if (error) throw error;
 
       toast.success("Milestone deleted successfully");
-      fetchMilestones();
+      // Update local state
+      setMilestones((prev) => prev.filter((milestone) => milestone.id !== id));
     } catch (error) {
       console.error("Error deleting milestone:", error);
       toast.error("Failed to delete milestone");
@@ -104,7 +139,19 @@ export default function MilestoneList({ projectId }) {
       if (error) throw error;
 
       toast.success(`Milestone marked as ${newStatus.replace("-", " ")}`);
-      fetchMilestones();
+
+      // Update local state
+      setMilestones((prev) =>
+        prev.map((milestone) =>
+          milestone.id === milestoneId
+            ? {
+                ...milestone,
+                status: newStatus,
+                updated_at: new Date().toISOString(),
+              }
+            : milestone
+        )
+      );
     } catch (error) {
       console.error("Error updating milestone status:", error);
       toast.error("Failed to update milestone status");
@@ -357,7 +404,7 @@ export default function MilestoneList({ projectId }) {
               const StatusIcon = config.icon;
               const progress = getProgressPercentage(milestone);
               const isExpanded = expandedMilestone === milestone.id;
-              const taskCount = milestone.tasks?.[0]?.count || 0;
+              const taskCount = milestone.task_count || 0; // Use task_count instead of tasks[0].count
               const isDeleting = deletingId === milestone.id;
               const isUpdatingStatus = updatingStatusId === milestone.id;
               const isExpanding = expandingId === milestone.id;

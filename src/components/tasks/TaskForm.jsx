@@ -14,6 +14,7 @@ export default function TaskForm({
   const [milestones, setMilestones] = useState([]);
   const [users, setUsers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
+  const [existingAssignees, setExistingAssignees] = useState([]); // Track assigned users
 
   // Track if status just changed to "review" to auto-fill feedback fields
   const [statusChangedToReview, setStatusChangedToReview] = useState(false);
@@ -23,7 +24,7 @@ export default function TaskForm({
     description: initialData?.description || "",
     status: initialData?.status || "todo",
     priority: initialData?.priority || "medium",
-    assignee_id: initialData?.assignee_id || "",
+    // Remove assignee_id - will handle through task_assignees table
     deadline: initialData?.deadline || "",
     milestone_id: milestoneId || initialData?.milestone_id || "",
     // Suggestions (always optional)
@@ -34,6 +35,43 @@ export default function TaskForm({
     feedback_by: initialData?.feedback_by || "",
     feedback_date: initialData?.feedback_date || "",
   });
+
+  // State for assignees (multiple users)
+  const [selectedAssignees, setSelectedAssignees] = useState([]);
+
+  // Fetch existing assignees for editing
+  useEffect(() => {
+    if (initialData?.id) {
+      fetchExistingAssignees(initialData.id);
+    }
+  }, [initialData?.id]);
+
+  const fetchExistingAssignees = async (taskId) => {
+    try {
+      const { data, error } = await supabase
+        .from("task_assignees")
+        .select(
+          `
+          user_id,
+          users:user_id (
+            id,
+            full_name,
+            email
+          )
+        `
+        )
+        .eq("task_id", taskId);
+
+      if (error) throw error;
+
+      if (data) {
+        const assigneeIds = data.map((item) => item.users.id).filter(Boolean);
+        setSelectedAssignees(assigneeIds);
+      }
+    } catch (error) {
+      console.error("Error fetching assignees:", error);
+    }
+  };
 
   // Check if status changed to "review" on mount
   useEffect(() => {
@@ -50,29 +88,66 @@ export default function TaskForm({
 
   // Fetch all necessary data
   useEffect(() => {
-    if (projectId) {
+    if (projectId && user) {
       fetchMilestones();
       fetchUsers();
     }
-  }, [projectId]);
+  }, [projectId, user]);
 
   const fetchMilestones = async () => {
-    const { data } = await supabase
-      .from("milestones")
-      .select("id, name, deadline")
-      .eq("project_id", projectId)
-      .order("deadline", { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from("milestones")
+        .select("id, name, deadline")
+        .eq("project_id", projectId)
+        .order("deadline", { ascending: true });
 
-    setMilestones(data || []);
+      if (error) throw error;
+      setMilestones(data || []);
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
+    }
   };
 
   const fetchUsers = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, email, full_name")
-      .order("full_name", { ascending: true });
+    try {
+      // First get project members
+      const { data: membersData, error: membersError } = await supabase
+        .from("project_members")
+        .select("user_id")
+        .eq("project_id", projectId);
 
-    setUsers(data || []);
+      if (membersError) throw membersError;
+
+      const memberIds = membersData?.map((m) => m.user_id) || [];
+
+      // Add project owner
+      const { data: projectData } = await supabase
+        .from("projects")
+        .select("owner_id")
+        .eq("id", projectId)
+        .single();
+
+      if (projectData?.owner_id) {
+        memberIds.push(projectData.owner_id);
+      }
+
+      // Fetch user details for all project members
+      if (memberIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("id, email, full_name")
+          .in("id", memberIds)
+          .order("full_name", { ascending: true });
+
+        if (usersError) throw usersError;
+        setUsers(usersData || []);
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
   };
 
   // Validation function
@@ -132,87 +207,75 @@ export default function TaskForm({
     return Object.keys(errors).length === 0;
   };
 
+  const handleAssigneeChange = (userId) => {
+    setSelectedAssignees((prev) => {
+      if (prev.includes(userId)) {
+        return prev.filter((id) => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validate form before submission
+    if (!user) {
+      setError("You must be logged in to create or edit tasks");
+      return;
+    }
+
     if (!validateForm()) {
-      return; // Stop submission if validation fails
+      return;
     }
 
     setLoading(true);
 
     try {
-      // Prepare task data - null for empty optional fields
+      // Prepare task data - REMOVE assignee_id as it doesn't exist in schema
       const taskData = {
         title: formData.title,
         description: formData.description || null,
         status: formData.status,
         priority: formData.priority,
-        assignee_id: formData.assignee_id || null,
         deadline: formData.deadline || null,
         milestone_id: formData.milestone_id || null,
         project_id: projectId,
         updated_at: new Date().toISOString(),
-        // Suggestions (always optional)
         suggestions: formData.suggestions || null,
         suggestion_by: formData.suggestions
-          ? formData.suggestion_by || user?.id
+          ? formData.suggestion_by || user.id
           : null,
-        // Feedback (optional, even in review status)
         feedback: formData.feedback || null,
         feedback_by: formData.feedback ? formData.feedback_by : null,
         feedback_date: formData.feedback ? formData.feedback_date : null,
       };
 
+      let taskId;
+
       if (initialData) {
         // Update task
+        taskId = initialData.id;
         const { error } = await supabase
           .from("tasks")
           .update(taskData)
-          .eq("id", initialData.id);
+          .eq("id", taskId);
 
         if (error) throw error;
 
-        // Log status change activity
-        if (initialData.status !== formData.status) {
-          await supabase.from("task_activities").insert([
-            {
-              task_id: initialData.id,
-              user_id: user?.id,
-              action: "status_changed",
-              details: `Status changed from ${initialData.status} to ${formData.status}`,
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
+        // Handle assignees - first remove existing ones
+        await supabase.from("task_assignees").delete().eq("task_id", taskId);
 
-        // Log feedback activity if feedback was added
-        if (formData.feedback && !initialData.feedback) {
-          await supabase.from("task_activities").insert([
-            {
-              task_id: initialData.id,
-              user_id: user?.id,
-              action: "feedback_added",
-              details: `Feedback provided`,
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
-
-        // Log if task moved to review
-        if (formData.status === "review" && initialData.status !== "review") {
-          await supabase.from("task_activities").insert([
-            {
-              task_id: initialData.id,
-              user_id: user?.id,
-              action: "moved_to_review",
-              details: `Task moved to review for feedback`,
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
+        // Log activity
+        await supabase.from("task_activities").insert([
+          {
+            task_id: taskId,
+            user_id: user.id,
+            action: "updated",
+            details: "Task was updated",
+          },
+        ]);
       } else {
         // Create new task
         const { data, error } = await supabase
@@ -227,22 +290,38 @@ export default function TaskForm({
           .single();
 
         if (error) throw error;
+        taskId = data.id;
 
-        // Log task creation activity
+        // Log activity
         await supabase.from("task_activities").insert([
           {
-            task_id: data.id,
-            user_id: user?.id,
-            action: "task_created",
-            details: `Task "${formData.title}" created`,
-            created_at: new Date().toISOString(),
+            task_id: taskId,
+            user_id: user.id,
+            action: "created",
+            details: "Task was created",
           },
         ]);
       }
 
+      // Add assignees to task_assignees table
+      if (selectedAssignees.length > 0) {
+        const assigneeEntries = selectedAssignees.map((userId) => ({
+          task_id: taskId,
+          user_id: userId,
+          assigned_at: new Date().toISOString(),
+        }));
+
+        const { error: assigneeError } = await supabase
+          .from("task_assignees")
+          .insert(assigneeEntries);
+
+        if (assigneeError) throw assigneeError;
+      }
+
       onSuccess?.();
     } catch (error) {
-      setError(error.message);
+      console.error("Error saving task:", error);
+      setError(error.message || "Failed to save task");
     } finally {
       setLoading(false);
     }
@@ -444,58 +523,67 @@ export default function TaskForm({
 
       {/* Assignment & Timeline Section */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <div className="space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Milestone Field - Optional */}
-            <div>
-              <label
-                htmlFor="milestone_id"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Milestone (Optional)
-              </label>
-              <select
-                id="milestone_id"
-                name="milestone_id"
-                value={formData.milestone_id}
-                onChange={handleChange}
-                className="input w-full"
-              >
-                <option value="">No milestone selected</option>
-                {milestones.map((milestone) => (
-                  <option key={milestone.id} value={milestone.id}>
-                    {milestone.name}
-                    {milestone.deadline &&
-                      ` (Due: ${new Date(
-                        milestone.deadline
-                      ).toLocaleDateString()})`}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          Assignment & Timeline
+        </h3>
 
-            {/* Assignee Field - Optional */}
-            <div>
-              <label
-                htmlFor="assignee_id"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Assign To (Optional)
-              </label>
-              <select
-                id="assignee_id"
-                name="assignee_id"
-                value={formData.assignee_id}
-                onChange={handleChange}
-                className="input w-full"
-              >
-                <option value="">Unassigned</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-              </select>
+        <div className="space-y-4">
+          {/* Milestone Field - Optional */}
+          <div>
+            <label
+              htmlFor="milestone_id"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Milestone (Optional)
+            </label>
+            <select
+              id="milestone_id"
+              name="milestone_id"
+              value={formData.milestone_id}
+              onChange={handleChange}
+              className="input w-full"
+            >
+              <option value="">No milestone selected</option>
+              {milestones.map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name}
+                  {milestone.deadline &&
+                    ` (Due: ${new Date(
+                      milestone.deadline
+                    ).toLocaleDateString()})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Assignees Field - Optional (Multiple) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Assign To (Optional) - {selectedAssignees.length} selected
+            </label>
+            <div className="space-y-2">
+              {users.map((userItem) => (
+                <label
+                  key={userItem.id}
+                  className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedAssignees.includes(userItem.id)}
+                    onChange={() => handleAssigneeChange(userItem.id)}
+                    className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">
+                    {userItem.full_name || userItem.email}
+                  </span>
+                </label>
+              ))}
+              {users.length === 0 && (
+                <p className="text-sm text-gray-500 italic">
+                  No project members found. Task can only be assigned to project
+                  members.
+                </p>
+              )}
             </div>
           </div>
 
@@ -594,8 +682,13 @@ export default function TaskForm({
           </p>
         </div>
       </div>
+
+      {/* Feedback Section */}
       {showFeedbackSection && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">
+            Feedback {formData.status === "review" && "(Optional)"}
+          </h3>
           <div>
             <label
               htmlFor="feedback"
@@ -627,14 +720,62 @@ export default function TaskForm({
                 {validationErrors.feedback}
               </p>
             )}
+
             {formData.status === "review" && (
-              <p className="mt-1 text-sm text-blue-600">
-                Task is in review. You can optionally provide feedback.
-              </p>
+              <div className="mt-3 grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="feedback_by"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Feedback By
+                  </label>
+                  <select
+                    id="feedback_by"
+                    name="feedback_by"
+                    value={formData.feedback_by}
+                    onChange={handleChange}
+                    className={`input w-full ${
+                      validationErrors.feedback_by
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
+                  >
+                    <option value="">Select reviewer</option>
+                    {users.map((userItem) => (
+                      <option key={userItem.id} value={userItem.id}>
+                        {userItem.full_name || userItem.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="feedback_date"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Feedback Date
+                  </label>
+                  <input
+                    type="date"
+                    id="feedback_date"
+                    name="feedback_date"
+                    value={formData.feedback_date}
+                    onChange={handleChange}
+                    max={getTodayDate()}
+                    className={`input w-full ${
+                      validationErrors.feedback_date
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
       )}
+
       {/* Info message when status is not review but task has feedback */}
       {formData.feedback && formData.status !== "review" && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg">

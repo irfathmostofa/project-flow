@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { User, Calendar, MessageSquare, ThumbsUp } from "lucide-react";
+import { User, Calendar, MessageSquare, ThumbsUp, Users } from "lucide-react";
 export function TaskDetails({ task, onClose, onEdit, onDelete }) {
   return (
     <div className="p-6">
@@ -58,17 +58,23 @@ export function TaskDetails({ task, onClose, onEdit, onDelete }) {
             </div>
           </div>
 
-          {task.assignee && (
-            <div>
-              <label className="text-xs font-medium text-gray-500">
-                Assigned To
-              </label>
-              <p className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                {task.assignee.full_name || task.assignee.email}
-              </p>
-            </div>
-          )}
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            {task.assignees && task.assignees.length > 0 ? (
+              <>
+                <Users className="h-4 w-4" />
+                <span>
+                  {task.assignees
+                    .slice(0, 2)
+                    .map((user) => user.full_name || user.email)
+                    .join(", ")}
+                  {task.assignees.length > 2 &&
+                    ` +${task.assignees.length - 2}`}
+                </span>
+              </>
+            ) : (
+              <span className="text-gray-400">Unassigned</span>
+            )}
+          </div>
 
           {task.deadline && (
             <div>

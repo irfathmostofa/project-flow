@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext"; // Added import
 
 export default function MilestoneForm({
   projectId,
   onSuccess,
   initialData = null,
 }) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
@@ -18,12 +19,18 @@ export default function MilestoneForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      setError("You must be logged in to create or edit milestones");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
       if (initialData) {
-        // Update milestone
+        // Update existing milestone - verify project ownership through RLS
         const { error } = await supabase
           .from("milestones")
           .update({
@@ -34,7 +41,7 @@ export default function MilestoneForm({
 
         if (error) throw error;
       } else {
-        // Create milestone
+        // Create new milestone - project_id is enough, RLS will handle ownership
         const { error } = await supabase.from("milestones").insert([
           {
             ...formData,
@@ -70,6 +77,12 @@ export default function MilestoneForm({
         </div>
       )}
 
+      {!user && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-600 px-4 py-3 rounded-lg">
+          Please log in to create or edit milestones
+        </div>
+      )}
+
       <div>
         <label
           htmlFor="name"
@@ -86,6 +99,7 @@ export default function MilestoneForm({
           onChange={handleChange}
           className="input w-full"
           placeholder="Enter milestone name"
+          disabled={!user || loading}
         />
       </div>
 
@@ -104,6 +118,7 @@ export default function MilestoneForm({
           onChange={handleChange}
           className="input resize-none w-full"
           placeholder="Describe the milestone..."
+          disabled={!user || loading}
         />
       </div>
 
@@ -122,6 +137,7 @@ export default function MilestoneForm({
             value={formData.deadline}
             onChange={handleChange}
             className="input"
+            disabled={!user || loading}
           />
         </div>
 
@@ -138,6 +154,7 @@ export default function MilestoneForm({
             value={formData.status}
             onChange={handleChange}
             className="input"
+            disabled={!user || loading}
           >
             <option value="pending">Pending</option>
             <option value="in-progress">In Progress</option>
@@ -155,7 +172,11 @@ export default function MilestoneForm({
         >
           Cancel
         </button>
-        <button type="submit" disabled={loading} className="btn-primary">
+        <button
+          type="submit"
+          disabled={!user || loading}
+          className="btn-primary"
+        >
           {loading
             ? "Saving..."
             : initialData

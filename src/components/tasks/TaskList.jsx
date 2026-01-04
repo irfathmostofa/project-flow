@@ -33,24 +33,38 @@ export default function TaskList({ projectId, milestoneId }) {
     fetchTasks();
   }, [projectId, milestoneId, filters]);
 
+  // In the fetchTasks function, update the query:
+
   const fetchTasks = async () => {
     try {
-      let query = supabase.from("tasks").select(`
-          *,
-          assignee:users(full_name, email),
-          milestone:milestones(name),
-          suggestion_by_user:users(full_name, email),
-          feedback_by_user:users(full_name, email)
-        `);
+      let query = supabase.from("tasks").select(
+        `
+      *,
+      task_assignees!left (
+        user_id,
+        users:user_id (
+          id,
+          full_name,
+          email
+        )
+      ),
+      milestone:milestones(name),
+      suggestion_by:users!suggestion_by(id, full_name, email),
+      feedback_by:users!feedback_by(id, full_name, email)
+    `
+      );
 
+      // Filter by project if provided
       if (projectId) {
         query = query.eq("project_id", projectId);
       }
 
+      // Filter by milestone if provided
       if (milestoneId) {
         query = query.eq("milestone_id", milestoneId);
       }
 
+      // Apply additional filters
       if (filters.status) {
         query = query.eq("status", filters.status);
       }
@@ -59,6 +73,7 @@ export default function TaskList({ projectId, milestoneId }) {
         query = query.eq("priority", filters.priority);
       }
 
+      // Apply sorting
       switch (filters.sortBy) {
         case "newest":
           query = query.order("created_at", { ascending: false });
@@ -76,7 +91,14 @@ export default function TaskList({ projectId, milestoneId }) {
       const { data, error } = await query;
 
       if (error) throw error;
-      setTasks(data || []);
+
+      // Process the data to flatten assignees
+      const processedData = data.map((task) => ({
+        ...task,
+        assignees: task.task_assignees?.map((ta) => ta.users) || [],
+      }));
+
+      setTasks(processedData || []);
     } catch (error) {
       console.error("Error fetching tasks:", error);
     } finally {
@@ -91,7 +113,9 @@ export default function TaskList({ projectId, milestoneId }) {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
 
       if (error) throw error;
-      fetchTasks();
+
+      // Update local state
+      setTasks((prev) => prev.filter((task) => task.id !== id));
     } catch (error) {
       console.error("Error deleting task:", error);
     }
@@ -114,7 +138,13 @@ export default function TaskList({ projectId, milestoneId }) {
         .eq("id", taskId);
 
       if (error) throw error;
-      fetchTasks();
+
+      // Update local state
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, ...updates } : task
+        )
+      );
     } catch (error) {
       console.error("Error updating task status:", error);
     }

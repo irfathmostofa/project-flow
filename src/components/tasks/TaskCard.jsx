@@ -13,6 +13,7 @@ import {
   ThumbsUp,
   ChevronDown,
   ChevronUp,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -87,14 +88,23 @@ export default function TaskCard({
               </p>
             )}
 
-            {task.assignee && (
-              <div className="flex items-center text-xs text-gray-600">
-                <User className="h-3 w-3 mr-1" />
-                <span className="truncate">
-                  {task.assignee.full_name || task.assignee.email}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              {task.assignees && task.assignees.length > 0 ? (
+                <>
+                  <Users className="h-4 w-4" />
+                  <span>
+                    {task.assignees
+                      .slice(0, 2)
+                      .map((user) => user.full_name || user.email)
+                      .join(", ")}
+                    {task.assignees.length > 2 &&
+                      ` +${task.assignees.length - 2}`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-gray-400">Unassigned</span>
+              )}
+            </div>
           </div>
 
           <div className="relative flex-shrink-0">
