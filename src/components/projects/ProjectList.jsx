@@ -15,7 +15,7 @@ import ProjectCard from "./ProjectCard";
 import Modal from "../ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import ProjectInvitation from "./ProjectInvitation";
-import DashboardInvitations from "./DashboardInvitations"; // Add this import
+import DashboardInvitations from "./DashboardInvitations";
 
 export default function ProjectList() {
   const [allProjects, setAllProjects] = useState([]);
@@ -31,9 +31,10 @@ export default function ProjectList() {
     search: "",
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "owned", "shared"
+  const [activeTab, setActiveTab] = useState("all");
   const { user } = useAuth();
-  const [hasInvitations, setHasInvitations] = useState(false); // Add state for invitations
+  const [hasInvitations, setHasInvitations] = useState(false);
+  const [projectMembersMap, setProjectMembersMap] = useState({}); // Store members for each project
 
   useEffect(() => {
     if (user) {
@@ -42,7 +43,6 @@ export default function ProjectList() {
     }
   }, [user]);
 
-  // Add this function to check for invitations
   const checkInvitations = async () => {
     if (!user) return;
 
@@ -59,6 +59,34 @@ export default function ProjectList() {
       }
     } catch (error) {
       console.error("Error checking invitations:", error);
+    }
+  };
+
+  // Fetch members for specific projects
+  const fetchProjectMembers = async (projectIds) => {
+    if (!projectIds || projectIds.length === 0) return {};
+
+    try {
+      const { data: members, error } = await supabase
+        .from("project_members")
+        .select("project_id, user_id")
+        .in("project_id", projectIds);
+
+      if (error) throw error;
+
+      // Group members by project_id
+      const membersMap = {};
+      members?.forEach((member) => {
+        if (!membersMap[member.project_id]) {
+          membersMap[member.project_id] = [];
+        }
+        membersMap[member.project_id].push(member);
+      });
+
+      return membersMap;
+    } catch (error) {
+      console.error("Error fetching project members:", error);
+      return {};
     }
   };
 
@@ -79,17 +107,20 @@ export default function ProjectList() {
 
       if (ownedError) throw ownedError;
 
-      // Fetch project members to find shared projects
+      // Fetch project members to find shared projects AND get member info
       const { data: memberProjects, error: memberError } = await supabase
         .from("project_members")
-        .select("project_id")
+        .select("project_id, user_id")
         .eq("user_id", user.id);
 
       if (memberError) throw memberError;
 
       let sharedProjects = [];
       if (memberProjects && memberProjects.length > 0) {
-        const projectIds = memberProjects.map((m) => m.project_id);
+        // Get unique project IDs where user is a member
+        const projectIds = [
+          ...new Set(memberProjects.map((m) => m.project_id)),
+        ];
 
         // Filter out projects that user already owns
         const sharedProjectIds = projectIds.filter(
@@ -104,6 +135,17 @@ export default function ProjectList() {
 
           if (sharedError) throw sharedError;
           sharedProjects = sharedData || [];
+        }
+
+        // Fetch all members for all projects (owned + shared)
+        const allProjectIds = [
+          ...(ownedProjects || []).map((p) => p.id),
+          ...(sharedProjects || []).map((p) => p.id),
+        ];
+
+        if (allProjectIds.length > 0) {
+          const membersMap = await fetchProjectMembers(allProjectIds);
+          setProjectMembersMap(membersMap);
         }
       }
 
@@ -132,7 +174,7 @@ export default function ProjectList() {
     }
   };
 
-  // Filter projects based on active tab
+  // Get filtered projects with member data
   const getFilteredProjects = () => {
     let filtered = allProjects;
 
@@ -190,7 +232,7 @@ export default function ProjectList() {
       return;
 
     try {
-      // Delete project members first (if they exist)
+      // Delete project members first
       await supabase.from("project_members").delete().eq("project_id", id);
 
       // Delete the project
@@ -200,6 +242,13 @@ export default function ProjectList() {
 
       // Update local state
       setAllProjects((prev) => prev.filter((project) => project.id !== id));
+
+      // Remove from members map
+      setProjectMembersMap((prev) => {
+        const newMap = { ...prev };
+        delete newMap[id];
+        return newMap;
+      });
     } catch (error) {
       console.error("Error deleting project:", error);
       alert("Error deleting project: " + error.message);
@@ -219,7 +268,7 @@ export default function ProjectList() {
   };
 
   const applyFilters = () => {
-    // Filters are applied in getFilteredProjects, no need to fetch again
+    // Filters are applied in getFilteredProjects
   };
 
   const clearFilters = () => {
@@ -245,13 +294,27 @@ export default function ProjectList() {
     setSelectedProjectForInvite(null);
   };
 
-  // Add callback function for when invitations are accepted/declined
-  const handleInvitationAction = () => {
-    fetchProjects(); // Refresh projects list to show newly joined projects
-    checkInvitations(); // Update invitation count
+  const handleInvitationAction = async () => {
+    await fetchProjects(); // Refresh projects list
+    checkInvitations();
+  };
+
+  const handleInviteSuccess = async (projectId) => {
+    // Refresh members for this specific project
+    const updatedMembers = await fetchProjectMembers([projectId]);
+    setProjectMembersMap((prev) => ({
+      ...prev,
+      ...updatedMembers,
+    }));
   };
 
   const filteredProjects = getFilteredProjects();
+
+  // Prepare projects with member data for ProjectCard
+  const projectsWithMembers = filteredProjects.map((project) => ({
+    ...project,
+    project_members: projectMembersMap[project.id] || [],
+  }));
 
   if (loading) {
     return (
@@ -285,21 +348,19 @@ export default function ProjectList() {
                   <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
                 </div>
                 <p className="text-gray-600 mt-1">
-                  {filteredProjects.length} project
-                  {filteredProjects.length !== 1 ? "s" : ""} total
+                  {projectsWithMembers.length} project
+                  {projectsWithMembers.length !== 1 ? "s" : ""} total
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Invitations Badge (optional) */}
               {hasInvitations && (
                 <div className="relative">
                   <div className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-ping"></div>
                   <div className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></div>
                   <button
                     onClick={() => {
-                      // Scroll to invitations section
                       document
                         .getElementById("invitations-section")
                         ?.scrollIntoView({ behavior: "smooth" });
@@ -312,7 +373,6 @@ export default function ProjectList() {
                 </div>
               )}
 
-              {/* New Project Button */}
               <div className="hidden lg:block">
                 <button
                   onClick={() => {
@@ -383,7 +443,6 @@ export default function ProjectList() {
           {/* Filters Section */}
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
-              {/* Filter Toggle Button */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
@@ -401,7 +460,6 @@ export default function ProjectList() {
               </button>
             </div>
 
-            {/* Search Input */}
             <div className="flex-1 max-w-md">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -422,7 +480,6 @@ export default function ProjectList() {
           {showFilters && (
             <div className="mt-6 pt-6 border-t-2 border-gray-100 animate-slideDown">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Status Filter */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Status
@@ -441,7 +498,6 @@ export default function ProjectList() {
                   </select>
                 </div>
 
-                {/* Sort By */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Sort By
@@ -460,7 +516,6 @@ export default function ProjectList() {
                   </select>
                 </div>
 
-                {/* Filter Actions */}
                 <div className="flex items-end space-x-2 lg:col-span-2">
                   <button
                     onClick={applyFilters}
@@ -481,7 +536,7 @@ export default function ProjectList() {
           )}
         </div>
 
-        {/* Project Modal */}
+        {/* Modals */}
         <Modal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
@@ -497,7 +552,6 @@ export default function ProjectList() {
           />
         </Modal>
 
-        {/* Invitation Modal */}
         <Modal
           isOpen={isInviteModalOpen}
           onClose={handleCloseInviteModal}
@@ -508,18 +562,18 @@ export default function ProjectList() {
             projectId={selectedProjectForInvite?.id}
             onSuccess={() => {
               handleCloseInviteModal();
-              fetchProjects();
+              handleInviteSuccess(selectedProjectForInvite?.id);
             }}
           />
         </Modal>
 
-        {/* Pending Invitations Section */}
+        {/* Pending Invitations */}
         <div id="invitations-section">
           <DashboardInvitations onInvitationAction={handleInvitationAction} />
         </div>
 
         {/* Projects List */}
-        {filteredProjects.length === 0 ? (
+        {projectsWithMembers.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 text-center py-16 px-6">
             <div className="max-w-md mx-auto">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -558,12 +612,12 @@ export default function ProjectList() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredProjects.map((project) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            {projectsWithMembers.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
-                viewMode="list" // Force list view
+                viewMode="list"
                 isOwner={project.isOwner}
                 onEdit={() => handleEdit(project)}
                 onDelete={deleteProject}

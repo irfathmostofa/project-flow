@@ -40,7 +40,7 @@ export default function ProjectCard({
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 ">
                   <Link
                     to={`/projects/${project.id}`}
                     className="font-semibold text-gray-900 hover:text-blue-600 truncate text-base"
@@ -49,11 +49,15 @@ export default function ProjectCard({
                     {project.name}
                   </Link>
                   <div className="flex gap-2 flex-shrink-0">
-                    <span className={`badge ${statusColors[project.status]}`}>
+                    <span
+                      className={`badge p-1 rounded ${
+                        statusColors[project.status]
+                      }`}
+                    >
                       {project.status}
                     </span>
                     {!isOwner && (
-                      <span className="badge bg-purple-100 text-purple-700 border-purple-200">
+                      <span className="badge p-1 rounded bg-purple-100 text-purple-700 border-purple-200">
                         Shared
                       </span>
                     )}
@@ -67,6 +71,14 @@ export default function ProjectCard({
                 )}
 
                 <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                  {project.created_at && (
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1.5" />
+                      <span>
+                        Create {format(new Date(project.created_at), "MMM d")}
+                      </span>
+                    </div>
+                  )}
                   {project.deadline && (
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1.5" />
@@ -136,7 +148,9 @@ export default function ProjectCard({
               </Link>
             </h3>
             <div className="flex flex-wrap gap-2 mb-2">
-              <span className={`badge border ${statusColors[project.status]}`}>
+              <span
+                className={`badge p-2 border ${statusColors[project.status]}`}
+              >
                 {project.status}
               </span>
               {!isOwner && (

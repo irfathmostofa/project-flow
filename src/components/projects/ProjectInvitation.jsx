@@ -132,10 +132,10 @@ export default function ProjectInvitationButton({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center space-x-2"
+        className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
       >
         <UserPlus className="h-4 w-4" />
-        <span>Quick Invite</span>
+        {/* <span>Quick Invite</span> */}
       </button>
 
       <Modal
