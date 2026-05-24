@@ -16,6 +16,10 @@ import { ToastProvider } from "./context/ToastContext";
 import ToastContainer from "./components/ui/Toast";
 import TaskList from "./components/tasks/TaskList";
 import TaskPage from "./pages/TaskPage";
+import Quotations from "./pages/Quotations";
+import Payments from "./pages/Payments";
+import Handovers from "./pages/Handovers";
+import InfrastructureRenewals from "./pages/InfrastructureRenewals";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -125,7 +129,46 @@ function App() {
                 </PrivateRoute>
               }
             />
-
+            <Route
+              path="/quotations"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Quotations />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Payments />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/handovers"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Handovers />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/infrastructure-renewals"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <InfrastructureRenewals />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
             {/* Redirects */}
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
