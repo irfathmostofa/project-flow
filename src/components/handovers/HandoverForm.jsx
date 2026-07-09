@@ -13,16 +13,65 @@ import {
   Calendar,
 } from "lucide-react";
 
-export default function HandoverForm({ projects, onSuccess, initialData }) {
+export default function HandoverForm({ projectId, onSuccess, initialData }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [quotationData, setQuotationData] = useState([]);
+
+  // Fetch projects and quotations if projectId is provided
+  useEffect(() => {
+    const fetchProjectsAndQuotations = async () => {
+      try {
+        if (projectId) {
+          // Fetch project
+          const { data: projectData, error: projectError } = await supabase
+            .from("projects")
+            .select("*")
+            .eq("id", projectId)
+            .single();
+
+          if (projectError) throw projectError;
+          setProjects(projectData ? [projectData] : []);
+
+          // Fetch quotation for this project
+          const { data: quotationData, error: quotationError } = await supabase
+            .from("quotations")
+            .select("*")
+            .eq("project_id", projectId);
+
+          if (quotationError) {
+            console.error("Error fetching quotation:", quotationError);
+            setQuotationData([]);
+          } else {
+            setQuotationData(quotationData || []);
+          }
+        } else {
+          // Fetch all projects if no specific projectId
+          const { data: projectsData, error: projectsError } = await supabase
+            .from("projects")
+            .select("*")
+            .order("name");
+
+          if (projectsError) throw projectsError;
+          setProjects(projectsData || []);
+          setQuotationData([]);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load project data");
+      }
+    };
+
+    fetchProjectsAndQuotations();
+  }, [projectId]);
 
   const [formData, setFormData] = useState({
-    project_id: initialData?.project_id || "",
+    project_id: initialData?.project_id || projectId || "",
     handover_number: initialData?.handover_number || "",
-    delivered_by: initialData?.delivered_by || user?.id,
+    delivered_by: initialData?.delivered_by || user?.id || "",
     received_by: initialData?.received_by || "",
     handover_date:
       initialData?.handover_date || new Date().toISOString().split("T")[0],
@@ -32,7 +81,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
   const [deliverables, setDeliverables] = useState(
     initialData?.handover_deliverables || [
       {
-        category: "Website",
+        category: "",
         feature_name: "",
         description: "",
         status: "delivered",
@@ -59,6 +108,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         topic: "",
         trainer_id: "",
         trainee_id: "",
+        notes: "",
       },
     ],
   );
@@ -71,13 +121,29 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         duration_days: 30,
         included: true,
         cost: 0,
+        start_date: "",
+        end_date: "",
       },
     ],
   );
 
+  // Reset form when initialData changes (for editing)
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        project_id: initialData.project_id || projectId || "",
+        handover_number: initialData.handover_number || "",
+        delivered_by: initialData.delivered_by || user?.id || "",
+        received_by: initialData.received_by || "",
+        handover_date:
+          initialData.handover_date || new Date().toISOString().split("T")[0],
+        status: initialData.status || "draft",
+      });
+    }
+  }, [initialData, projectId, user]);
+
   useEffect(() => {
     generateHandoverNumber();
-    fetchTeamMembers();
   }, []);
 
   useEffect(() => {
@@ -87,54 +153,103 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
   }, [formData.project_id]);
 
   const generateHandoverNumber = async () => {
-    const year = new Date().getFullYear();
-    const { data } = await supabase
-      .from("handover_documents")
-      .select("handover_number")
-      .order("created_at", { ascending: false })
-      .limit(1);
+    try {
+      const year = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from("handover_documents")
+        .select("handover_number")
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-    let nextNum = 1;
-    if (data && data.length > 0) {
-      const lastNum = parseInt(data[0].handover_number.split("-")[2]);
-      nextNum = lastNum + 1;
+      if (error) {
+        console.error("Error generating handover number:", error);
+        // Set default number if there's an error
+        setFormData((prev) => ({
+          ...prev,
+          handover_number: `HO-${year}-0001`,
+        }));
+        return;
+      }
+
+      let nextNum = 1;
+      if (data && data.length > 0 && data[0].handover_number) {
+        const parts = data[0].handover_number.split("-");
+        if (parts.length === 3) {
+          const lastNum = parseInt(parts[2]);
+          if (!isNaN(lastNum)) {
+            nextNum = lastNum + 1;
+          }
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        handover_number: `HO-${year}-${String(nextNum).padStart(4, "0")}`,
+      }));
+    } catch (error) {
+      console.error("Error in generateHandoverNumber:", error);
+      // Set a fallback number
+      const year = new Date().getFullYear();
+      setFormData((prev) => ({
+        ...prev,
+        handover_number: `HO-${year}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+      }));
     }
-
-    setFormData((prev) => ({
-      ...prev,
-      handover_number: `HO-${year}-${String(nextNum).padStart(4, "0")}`,
-    }));
   };
 
   const fetchTeamMembers = async () => {
     if (!formData.project_id) return;
 
     try {
-      const { data: membersData } = await supabase
+      // Fetch project members
+      const { data: membersData, error: membersError } = await supabase
         .from("project_members")
-        .select("user_id, users:user_id(id, full_name, email)")
+        .select("user_id")
         .eq("project_id", formData.project_id);
 
-      const { data: projectData } = await supabase
+      if (membersError) {
+        console.error("Error fetching members:", membersError);
+        return;
+      }
+
+      // Get unique user IDs
+      const userIds = membersData?.map((m) => m.user_id) || [];
+
+      // Add owner if not already included
+      const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("owner_id")
         .eq("id", formData.project_id)
         .single();
 
-      const members = membersData?.map((m) => m.users) || [];
-
-      if (projectData?.owner_id) {
-        const { data: ownerData } = await supabase
-          .from("users")
-          .select("id, full_name, email")
-          .eq("id", projectData.owner_id)
-          .single();
-        if (ownerData) members.push(ownerData);
+      if (projectError) {
+        console.error("Error fetching project:", projectError);
+        return;
       }
 
-      setTeamMembers(members);
+      if (projectData?.owner_id && !userIds.includes(projectData.owner_id)) {
+        userIds.push(projectData.owner_id);
+      }
+
+      // Fetch user details
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (usersError) {
+          console.error("Error fetching users:", usersError);
+          return;
+        }
+
+        setTeamMembers(usersData || []);
+      } else {
+        setTeamMembers([]);
+      }
     } catch (error) {
       console.error("Error fetching team members:", error);
+      setTeamMembers([]);
     }
   };
 
@@ -144,67 +259,117 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
     setLoading(true);
 
     try {
+      // Validation
       if (!formData.project_id) throw new Error("Please select a project");
       if (!formData.received_by)
         throw new Error("Please select who received the handover");
       if (deliverables.length === 0)
         throw new Error("At least one deliverable is required");
 
+      // Validate deliverables have required fields
+      const invalidDeliverables = deliverables.filter(
+        (d) => !d.category || !d.feature_name,
+      );
+      if (invalidDeliverables.length > 0) {
+        throw new Error(
+          "All deliverables must have a category and feature name",
+        );
+      }
+
       let handoverId;
 
+      // Prepare form data for insertion/update
+      const handoverData = {
+        project_id: formData.project_id,
+        handover_number: formData.handover_number,
+        delivered_by: formData.delivered_by || user?.id,
+        received_by: formData.received_by,
+        handover_date: formData.handover_date,
+        status: formData.status || "draft",
+        updated_at: new Date().toISOString(),
+      };
+
       if (initialData) {
+        // Update existing
         const { error } = await supabase
           .from("handover_documents")
-          .update(formData)
+          .update(handoverData)
           .eq("id", initialData.id);
+
         if (error) throw error;
         handoverId = initialData.id;
 
         // Delete existing related records
-        await supabase
-          .from("handover_deliverables")
-          .delete()
-          .eq("handover_id", handoverId);
-        await supabase
-          .from("handover_credentials")
-          .delete()
-          .eq("handover_id", handoverId);
-        await supabase
-          .from("handover_training_sessions")
-          .delete()
-          .eq("handover_id", handoverId);
-        await supabase
-          .from("handover_support_terms")
-          .delete()
-          .eq("handover_id", handoverId);
+        const deletePromises = [
+          supabase
+            .from("handover_deliverables")
+            .delete()
+            .eq("handover_id", handoverId),
+          supabase
+            .from("handover_credentials")
+            .delete()
+            .eq("handover_id", handoverId),
+          supabase
+            .from("handover_training_sessions")
+            .delete()
+            .eq("handover_id", handoverId),
+          supabase
+            .from("handover_support_terms")
+            .delete()
+            .eq("handover_id", handoverId),
+        ];
+
+        await Promise.all(deletePromises);
       } else {
+        // Insert new
         const { data, error } = await supabase
           .from("handover_documents")
-          .insert([{ ...formData, created_at: new Date().toISOString() }])
+          .insert([{ ...handoverData, created_at: new Date().toISOString() }])
           .select()
           .single();
+
         if (error) throw error;
         handoverId = data.id;
       }
 
       // Insert deliverables
       if (deliverables.length > 0) {
-        const deliverablesData = deliverables.map((item, index) => ({
-          handover_id: handoverId,
-          ...item,
-          display_order: index,
-        }));
-        await supabase.from("handover_deliverables").insert(deliverablesData);
+        const deliverablesData = deliverables
+          .filter((d) => d.category && d.feature_name) // Only include valid deliverables
+          .map((item, index) => ({
+            handover_id: handoverId,
+            category: item.category,
+            feature_name: item.feature_name,
+            description: item.description || "",
+            status: item.status || "delivered",
+            display_order: index,
+          }));
+
+        if (deliverablesData.length > 0) {
+          const { error } = await supabase
+            .from("handover_deliverables")
+            .insert(deliverablesData);
+
+          if (error) throw error;
+        }
       }
 
       // Insert credentials
-      const validCredentials = credentials.filter((c) => c.platform_name);
+      const validCredentials = credentials.filter(
+        (c) => c.platform_name && c.platform_name.trim(),
+      );
       if (validCredentials.length > 0) {
-        await supabase
-          .from("handover_credentials")
-          .insert(
-            validCredentials.map((c) => ({ handover_id: handoverId, ...c })),
-          );
+        const { error } = await supabase.from("handover_credentials").insert(
+          validCredentials.map((c) => ({
+            handover_id: handoverId,
+            platform_name: c.platform_name,
+            username: c.username || "",
+            password_encrypted: c.password_encrypted || "",
+            access_url: c.access_url || "",
+          })),
+        );
+
+        if (error) throw error;
       }
 
       // Insert training sessions
@@ -212,24 +377,48 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         (s) => s.topic && s.trainer_id && s.trainee_id,
       );
       if (validSessions.length > 0) {
-        await supabase
+        const { error } = await supabase
           .from("handover_training_sessions")
           .insert(
-            validSessions.map((s) => ({ handover_id: handoverId, ...s })),
+            validSessions.map((s) => ({
+              handover_id: handoverId,
+              session_date: s.session_date || null,
+              duration_minutes: s.duration_minutes || 60,
+              topic: s.topic,
+              trainer_id: s.trainer_id,
+              trainee_id: s.trainee_id,
+              notes: s.notes || "",
+            })),
           );
+
+        if (error) throw error;
       }
 
       // Insert support terms
-      const validSupport = supportTerms.filter((s) => s.support_type);
+      const validSupport = supportTerms.filter(
+        (s) => s.support_type && s.support_type.trim(),
+      );
       if (validSupport.length > 0) {
-        await supabase
-          .from("handover_support_terms")
-          .insert(validSupport.map((s) => ({ handover_id: handoverId, ...s })));
+        const { error } = await supabase.from("handover_support_terms").insert(
+          validSupport.map((s) => ({
+            handover_id: handoverId,
+            support_type: s.support_type,
+            description: s.description || "",
+            duration_days: s.duration_days || 30,
+            included: s.included !== undefined ? s.included : true,
+            cost: s.cost || 0,
+            start_date: s.start_date || null,
+            end_date: s.end_date || null,
+          })),
+        );
+
+        if (error) throw error;
       }
 
       onSuccess();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "An error occurred while saving the handover");
+      console.error("Submit error:", err);
     } finally {
       setLoading(false);
     }
@@ -241,8 +430,9 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
       className="space-y-8 max-h-[80vh] overflow-y-auto px-2"
     >
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -262,7 +452,8 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 setFormData((prev) => ({ ...prev, project_id: e.target.value }))
               }
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              disabled={!!projectId} // Disable if projectId is provided as prop
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:cursor-not-allowed focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="">Select project</option>
               {projects.map((project) => (
@@ -300,7 +491,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 }))
               }
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -316,15 +507,32 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 }))
               }
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="">Select client representative</option>
-              {teamMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.full_name || member.email}
+              {quotationData.length > 0 ? (
+                quotationData.map((quotation) => (
+                  <option
+                    key={quotation.id}
+                    value={quotation.client_id || quotation.id}
+                  >
+                    {quotation.client_name ||
+                      quotation.client_contact ||
+                      "Client Representative"}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>
+                  No quotations found for this project
                 </option>
-              ))}
+              )}
             </select>
+            {quotationData.length === 0 && formData.project_id && (
+              <p className="mt-1 text-sm text-amber-600">
+                No quotations found. Please add a quotation for this project
+                first.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -332,7 +540,9 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
       {/* Deliverables Section */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">Deliverables</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Deliverables *
+          </h3>
           <button
             type="button"
             onClick={() =>
@@ -346,7 +556,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 },
               ])
             }
-            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg"
+            className="px-3 py-1.5 text-sm bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
           >
             <Plus className="h-4 w-4 inline mr-1" />
             Add Deliverable
@@ -356,19 +566,21 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         {deliverables.map((item, index) => (
           <div
             key={index}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-4 space-y-3 hover:border-orange-200 transition-colors"
           >
             <div className="flex justify-between">
               <Box className="h-5 w-5 text-gray-400" />
-              <button
-                type="button"
-                onClick={() =>
-                  setDeliverables(deliverables.filter((_, i) => i !== index))
-                }
-                className="text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {deliverables.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDeliverables(deliverables.filter((_, i) => i !== index))
+                  }
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <input
               type="text"
@@ -379,7 +591,8 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].category = e.target.value;
                 setDeliverables(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <input
               type="text"
@@ -390,7 +603,8 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].feature_name = e.target.value;
                 setDeliverables(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <textarea
               placeholder="Description"
@@ -401,7 +615,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 setDeliverables(updated);
               }}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
         ))}
@@ -426,7 +640,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 },
               ])
             }
-            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg"
+            className="px-3 py-1.5 text-sm bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
           >
             <Plus className="h-4 w-4 inline mr-1" />
             Add Credential
@@ -436,19 +650,21 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         {credentials.map((item, index) => (
           <div
             key={index}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-4 space-y-3 hover:border-orange-200 transition-colors"
           >
             <div className="flex justify-between">
               <Key className="h-5 w-5 text-gray-400" />
-              <button
-                type="button"
-                onClick={() =>
-                  setCredentials(credentials.filter((_, i) => i !== index))
-                }
-                className="text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {credentials.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCredentials(credentials.filter((_, i) => i !== index))
+                  }
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <input
               type="text"
@@ -459,7 +675,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].platform_name = e.target.value;
                 setCredentials(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <input
               type="text"
@@ -470,7 +686,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].username = e.target.value;
                 setCredentials(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <input
               type="text"
@@ -481,7 +697,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].password_encrypted = e.target.value;
                 setCredentials(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <input
               type="url"
@@ -492,7 +708,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].access_url = e.target.value;
                 setCredentials(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
         ))}
@@ -515,10 +731,11 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                   topic: "",
                   trainer_id: "",
                   trainee_id: "",
+                  notes: "",
                 },
               ])
             }
-            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg"
+            className="px-3 py-1.5 text-sm bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
           >
             <Plus className="h-4 w-4 inline mr-1" />
             Add Session
@@ -528,21 +745,23 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         {trainingSessions.map((item, index) => (
           <div
             key={index}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-4 space-y-3 hover:border-orange-200 transition-colors"
           >
             <div className="flex justify-between">
               <GraduationCap className="h-5 w-5 text-gray-400" />
-              <button
-                type="button"
-                onClick={() =>
-                  setTrainingSessions(
-                    trainingSessions.filter((_, i) => i !== index),
-                  )
-                }
-                className="text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {trainingSessions.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTrainingSessions(
+                      trainingSessions.filter((_, i) => i !== index),
+                    )
+                  }
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <input
@@ -554,7 +773,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                   updated[index].session_date = e.target.value;
                   setTrainingSessions(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <input
                 type="number"
@@ -562,10 +781,11 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 value={item.duration_minutes}
                 onChange={(e) => {
                   const updated = [...trainingSessions];
-                  updated[index].duration_minutes = parseInt(e.target.value);
+                  updated[index].duration_minutes =
+                    parseInt(e.target.value) || 0;
                   setTrainingSessions(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
             <input
@@ -577,7 +797,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].topic = e.target.value;
                 setTrainingSessions(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <div className="grid grid-cols-2 gap-3">
               <select
@@ -587,7 +807,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                   updated[index].trainer_id = e.target.value;
                   setTrainingSessions(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">Select Trainer</option>
                 {teamMembers.map((member) => (
@@ -603,7 +823,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                   updated[index].trainee_id = e.target.value;
                   setTrainingSessions(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">Select Trainee</option>
                 {teamMembers.map((member) => (
@@ -615,14 +835,14 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
             </div>
             <textarea
               placeholder="Notes"
-              value={item.notes}
+              value={item.notes || ""}
               onChange={(e) => {
                 const updated = [...trainingSessions];
                 updated[index].notes = e.target.value;
                 setTrainingSessions(updated);
               }}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
         ))}
@@ -650,7 +870,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 },
               ])
             }
-            className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg"
+            className="px-3 py-1.5 text-sm bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
           >
             <Plus className="h-4 w-4 inline mr-1" />
             Add Support Term
@@ -660,19 +880,21 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         {supportTerms.map((item, index) => (
           <div
             key={index}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-4 space-y-3 hover:border-orange-200 transition-colors"
           >
             <div className="flex justify-between">
               <HeartHandshake className="h-5 w-5 text-gray-400" />
-              <button
-                type="button"
-                onClick={() =>
-                  setSupportTerms(supportTerms.filter((_, i) => i !== index))
-                }
-                className="text-red-500"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {supportTerms.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSupportTerms(supportTerms.filter((_, i) => i !== index))
+                  }
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <input
               type="text"
@@ -683,7 +905,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 updated[index].support_type = e.target.value;
                 setSupportTerms(updated);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <textarea
               placeholder="Description"
@@ -694,33 +916,33 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 setSupportTerms(updated);
               }}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm text-gray-600">Start Date</label>
                 <input
                   type="date"
-                  value={item.start_date}
+                  value={item.start_date || ""}
                   onChange={(e) => {
                     const updated = [...supportTerms];
                     updated[index].start_date = e.target.value;
                     setSupportTerms(updated);
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="text-sm text-gray-600">End Date</label>
                 <input
                   type="date"
-                  value={item.end_date}
+                  value={item.end_date || ""}
                   onChange={(e) => {
                     const updated = [...supportTerms];
                     updated[index].end_date = e.target.value;
                     setSupportTerms(updated);
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -731,10 +953,10 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 value={item.duration_days}
                 onChange={(e) => {
                   const updated = [...supportTerms];
-                  updated[index].duration_days = parseInt(e.target.value);
+                  updated[index].duration_days = parseInt(e.target.value) || 0;
                   setSupportTerms(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <input
                 type="number"
@@ -742,10 +964,10 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                 value={item.cost}
                 onChange={(e) => {
                   const updated = [...supportTerms];
-                  updated[index].cost = parseFloat(e.target.value);
+                  updated[index].cost = parseFloat(e.target.value) || 0;
                   setSupportTerms(updated);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
             <label className="flex items-center gap-2">
@@ -757,7 +979,7 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
                   updated[index].included = e.target.checked;
                   setSupportTerms(updated);
                 }}
-                className="h-4 w-4 text-blue-600 rounded"
+                className="h-4 w-4 text-orange-600 rounded focus:ring-orange-500"
               />
               <span className="text-sm text-gray-700">
                 Included in package (no additional cost)
@@ -772,20 +994,25 @@ export default function HandoverForm({ projects, onSuccess, initialData }) {
         <button
           type="button"
           onClick={onSuccess}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+          className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {loading
-            ? "Saving..."
-            : initialData
-              ? "Update Handover"
-              : "Create Handover"}
+          {loading ? (
+            <>
+              <span className="inline-block animate-spin mr-2">⟳</span>
+              Saving...
+            </>
+          ) : initialData ? (
+            "Update Handover"
+          ) : (
+            "Create Handover"
+          )}
         </button>
       </div>
     </form>
