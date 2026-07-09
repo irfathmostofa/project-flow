@@ -47,7 +47,8 @@ export default function Dashboard() {
       const { data: ownedProjects } = await supabase
         .from("projects")
         .select("*")
-        .eq("owner_id", user.id);
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
 
       // Fetch projects where user is a member
       const { data: memberProjects } = await supabase
@@ -68,7 +69,7 @@ export default function Dashboard() {
 
         // Filter out duplicates (projects user already owns)
         const uniqueMemberProjects = (memberProjectDetails || []).filter(
-          (project) => !ownedProjects?.some((owned) => owned.id === project.id)
+          (project) => !ownedProjects?.some((owned) => owned.id === project.id),
         );
 
         allProjects = [...allProjects, ...uniqueMemberProjects];
@@ -111,14 +112,14 @@ export default function Dashboard() {
 
       // Remove duplicates
       const uniqueTasks = Array.from(
-        new Map(combinedTasks.map((task) => [task.id, task])).values()
+        new Map(combinedTasks.map((task) => [task.id, task])).values(),
       );
 
       // Calculate overdue tasks
       const today = new Date().toISOString().split("T")[0];
       const overdueTasks = uniqueTasks.filter(
         (task) =>
-          task.deadline && task.deadline < today && task.status !== "completed"
+          task.deadline && task.deadline < today && task.status !== "completed",
       );
 
       // Calculate stats
@@ -153,7 +154,7 @@ export default function Dashboard() {
           task.deadline &&
           task.deadline >= today &&
           task.deadline <= nextWeekStr &&
-          task.status !== "completed"
+          task.status !== "completed",
       );
 
       // Get project names for upcoming tasks
@@ -169,7 +170,7 @@ export default function Dashboard() {
             ...task,
             project: project || { name: "Unknown Project" },
           };
-        })
+        }),
       );
 
       setUpcomingDeadlines(upcomingDeadlinesWithProjects);
@@ -388,8 +389,8 @@ export default function Dashboard() {
                                 project.status === "active"
                                   ? "bg-green-100 text-green-700 border-green-200"
                                   : project.status === "completed"
-                                  ? "bg-blue-100 text-blue-700 border-blue-200"
-                                  : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                                    : "bg-yellow-100 text-yellow-700 border-yellow-200"
                               }`}
                             >
                               {project.status.toUpperCase()}
@@ -461,10 +462,10 @@ export default function Dashboard() {
                                 task.priority === "urgent"
                                   ? "bg-red-100 text-red-700 border-red-200"
                                   : task.priority === "high"
-                                  ? "bg-orange-100 text-orange-700 border-orange-200"
-                                  : task.priority === "medium"
-                                  ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                                  : "bg-green-100 text-green-700 border-green-200"
+                                    ? "bg-orange-100 text-orange-700 border-orange-200"
+                                    : task.priority === "medium"
+                                      ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                      : "bg-green-100 text-green-700 border-green-200"
                               }`}
                             >
                               {task.priority?.toUpperCase() || "MEDIUM"}

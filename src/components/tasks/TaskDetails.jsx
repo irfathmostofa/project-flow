@@ -138,7 +138,7 @@ export function TaskDetails({ task, onClose, onEdit, onDelete }) {
 
         {/* Empty state */}
         {!task.suggestions && !task.feedback && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-4 text-gray-500">
             <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p>No suggestions or feedback available for this task.</p>
           </div>

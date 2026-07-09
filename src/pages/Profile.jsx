@@ -14,14 +14,24 @@ import {
   Camera,
   CheckCircle,
   AlertTriangle,
+  Building,
+  Phone,
+  Globe,
+  MapPin,
+  CreditCard,
+  Briefcase,
+  Settings,
+  Upload,
+  LogOut,
 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [companySettings, setCompanySettings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -31,9 +41,21 @@ export default function Profile() {
     avatar_url: "",
   });
 
+  const [companyFormData, setCompanyFormData] = useState({
+    company_name: "",
+    company_title: "",
+    company_address: "",
+    company_phone: "",
+    company_email: "",
+    company_website: "",
+    tax_id: "",
+    currency: "BDT",
+  });
+
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchCompanySettings();
     }
   }, [user]);
 
@@ -59,7 +81,58 @@ export default function Profile() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const fetchCompanySettings = async () => {
+    try {
+      console.log("Fetching company settings for user:", user.id); // Debug log
+
+      const { data, error } = await supabase
+        .from("company_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
+
+      if (error) {
+        console.error("Error fetching:", error);
+        throw error;
+      }
+
+      console.log("Fetched data:", data); // Debug log
+
+      if (data) {
+        setCompanySettings(data);
+        setCompanyFormData({
+          company_name: data.company_name || "",
+          company_title: data.company_title || "",
+          company_address: data.company_address || "",
+          company_phone: data.company_phone || "",
+          company_email: data.company_email || "",
+          company_website: data.company_website || "",
+          tax_id: data.tax_id || "",
+          currency: data.currency || "BDT",
+        });
+      } else {
+        // No settings found, initialize empty form
+        console.log("No company settings found, will create new on save");
+        setCompanySettings(null);
+        setCompanyFormData({
+          company_name: "",
+          company_title: "",
+          company_address: "",
+          company_phone: "",
+          company_email: "",
+          company_website: "",
+          tax_id: "",
+          currency: "BDT",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching company settings:", error);
+      // Don't throw, just log the error
+      setCompanySettings(null);
+    }
+  };
+
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError("");
@@ -74,12 +147,67 @@ export default function Profile() {
       if (error) throw error;
 
       setProfile((prev) => ({ ...prev, ...formData }));
-      setEditing(false);
       setSuccess("Profile updated successfully!");
-
       setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
       setError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompanySubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      // Validate required fields
+      if (!companyFormData.company_name) {
+        throw new Error("Company name is required");
+      }
+
+      // Prepare the data for upsert
+      const companyData = {
+        user_id: user.id,
+        company_name: companyFormData.company_name,
+        company_title: companyFormData.company_title || null,
+        company_address: companyFormData.company_address || null,
+        company_phone: companyFormData.company_phone || null,
+        company_email: companyFormData.company_email || null,
+        company_website: companyFormData.company_website || null,
+        tax_id: companyFormData.tax_id || null,
+        currency: companyFormData.currency || "BDT",
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log("Saving company data:", companyData); // Debug log
+
+      // Use upsert with proper syntax
+      const { data, error } = await supabase
+        .from("company_settings")
+        .upsert(companyData, {
+          onConflict: "user_id", // Specify conflict target
+          ignoreDuplicates: false,
+        })
+        .select();
+
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+
+      console.log("Saved successfully:", data); // Debug log
+
+      // Refresh company settings
+      await fetchCompanySettings();
+
+      setSuccess("Company settings saved successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      console.error("Error saving company settings:", error);
+      setError(error.message || "Failed to save company settings");
     } finally {
       setSaving(false);
     }
@@ -92,11 +220,24 @@ export default function Profile() {
     });
   };
 
+  const handleCompanyChange = (e) => {
+    setCompanyFormData({
+      ...companyFormData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const tabs = [
+    { id: "personal", label: "Personal Info", icon: User },
+    { id: "company", label: "Company Info", icon: Building },
+    { id: "security", label: "Security", icon: Shield },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
         </div>
       </div>
@@ -104,84 +245,93 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 ">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-5xl mx-auto px-4 py-4">
         {/* Alerts */}
         {error && (
-          <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2 animate-slideDown">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border-2 border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center space-x-2 animate-slideDown">
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
             <CheckCircle className="h-5 w-5 flex-shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         {/* Profile Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Profile Header with Gradient */}
-          <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 p-6 sm:p-8">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full -mr-20 -mt-20"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -ml-16 -mb-16"></div>
-
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4">
-                {/* Avatar */}
-                <div className="relative group">
-                  <div className="h-15 w-15 sm:h-24 sm:w-24 bg-white rounded-full flex items-center justify-center shadow-xl ring-4 ring-white/50">
-                    {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.full_name || user.email}
-                        className="h-full w-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-10 w-10 sm:h-12 sm:w-12 text-purple-600" />
-                    )}
-                  </div>
-                  {editing && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="h-6 w-6 text-white" />
-                    </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Profile Header */}
+          <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+            <div className="flex items-center gap-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/50">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.full_name || user.email}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-12 w-12 text-purple-600" />
                   )}
-                  <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-yellow-300 animate-pulse" />
-                </div>
-
-                <div>
-                  <h2 className="text-md sm:text-3xl font-bold text-white">
-                    {profile?.full_name || "User"}
-                  </h2>
-                  <p className="text-purple-100 flex items-center mt-1">
-                    <Mail className="h-4 w-4 mr-2" />
-                    {user.email}
-                  </p>
                 </div>
               </div>
 
-              {!editing && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="group flex items-center px-6 py-3 bg-white text-purple-600 rounded-xl hover:shadow-xl transition-all font-semibold"
-                >
-                  <Edit className="h-5 w-5 mr-2 group-hover:rotate-12 transition-transform" />
-                  Edit Profile
-                </button>
-              )}
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-white">
+                  {profile?.full_name || user.email?.split("@")[0]}
+                </h2>
+                <p className="text-purple-100 flex items-center gap-2 mt-1">
+                  <Mail className="h-4 w-4" />
+                  {user.email}
+                </p>
+                <p className="text-purple-100 text-sm mt-1">
+                  Member since{" "}
+                  {user.created_at
+                    ? format(new Date(user.created_at), "MMMM yyyy")
+                    : "Recently"}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Profile Content */}
-          <div className="p-6 sm:p-8">
-            {editing ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200 px-6">
+            <nav className="flex gap-6">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 py-4 border-b-2 transition-colors ${
+                      isActive
+                        ? "border-purple-600 text-purple-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-6">
+            {/* Personal Info Tab */}
+            {activeTab === "personal" && (
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name
                     </label>
                     <input
@@ -189,13 +339,25 @@ export default function Profile() {
                       name="full_name"
                       value={formData.full_name}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                       placeholder="Enter your full name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={user.email}
+                      disabled
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Avatar URL
                     </label>
                     <input
@@ -203,167 +365,295 @@ export default function Profile() {
                       name="avatar_url"
                       value={formData.avatar_url}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                       placeholder="https://example.com/avatar.jpg"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      setFormData({
-                        full_name: profile.full_name || "",
-                        avatar_url: profile.avatar_url || "",
-                      });
-                    }}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors flex items-center"
-                    disabled={saving}
-                  >
-                    <X className="h-5 w-5 mr-2" />
-                    Cancel
-                  </button>
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all flex items-center disabled:opacity-50"
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    <Save className="h-5 w-5 mr-2" />
+                    <Save className="h-4 w-4" />
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>
-            ) : (
-              <div className="space-y-6">
+            )}
+
+            {/* Company Info Tab */}
+            {activeTab === "company" && (
+              <form onSubmit={handleCompanySubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                    <h3 className="text-sm font-bold text-gray-600 mb-2 flex items-center">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Email Address
-                    </h3>
-                    <p className="text-gray-900 font-semibold">{user.email}</p>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Building className="h-4 w-4 inline mr-1" />
+                      Company Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="company_name"
+                      value={companyFormData.company_name}
+                      onChange={handleCompanyChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Your company name"
+                    />
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                    <h3 className="text-sm font-bold text-gray-600 mb-2 flex items-center">
-                      <User className="h-4 w-4 mr-2" />
-                      Full Name
-                    </h3>
-                    <p className="text-gray-900 font-semibold">
-                      {profile?.full_name
-                        ? profile?.full_name
-                        : user.user_metadata.full_name}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Briefcase className="h-4 w-4 inline mr-1" />
+                      Your Title/Role
+                    </label>
+                    <input
+                      type="text"
+                      name="company_title"
+                      value={companyFormData.company_title}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="e.g., Full Stack Developer, CEO"
+                    />
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-                    <h3 className="text-sm font-bold text-gray-600 mb-2 flex items-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Account Created
-                    </h3>
-                    <p className="text-gray-900 font-semibold">
-                      {user.created_at
-                        ? format(new Date(user.created_at), "MMMM d, yyyy")
-                        : "Unknown"}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Phone className="h-4 w-4 inline mr-1" />
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="company_phone"
+                      value={companyFormData.company_phone}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="Your phone number"
+                    />
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border border-yellow-100">
-                    <h3 className="text-sm font-bold text-gray-600 mb-2 flex items-center">
-                      <Key className="h-4 w-4 mr-2" />
-                      User ID
-                    </h3>
-                    <p className="text-gray-900 font-mono text-xs truncate font-semibold">
-                      {user.id}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Mail className="h-4 w-4 inline mr-1" />
+                      Company Email
+                    </label>
+                    <input
+                      type="email"
+                      name="company_email"
+                      value={companyFormData.company_email}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="company@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Globe className="h-4 w-4 inline mr-1" />
+                      Website
+                    </label>
+                    <input
+                      type="url"
+                      name="company_website"
+                      value={companyFormData.company_website}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="https://yourwebsite.com"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <MapPin className="h-4 w-4 inline mr-1" />
+                      Company Address
+                    </label>
+                    <input
+                      type="text"
+                      name="company_address"
+                      value={companyFormData.company_address}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="Full address"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tax/VAT ID
+                    </label>
+                    <input
+                      type="text"
+                      name="tax_id"
+                      value={companyFormData.tax_id}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="Tax ID (optional)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <CreditCard className="h-4 w-4 inline mr-1" />
+                      Default Currency
+                    </label>
+                    <select
+                      name="currency"
+                      value={companyFormData.currency}
+                      onChange={handleCompanyChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="BDT">BDT (৳) - Bangladeshi Taka</option>
+                      <option value="USD">USD ($) - US Dollar</option>
+                      <option value="EUR">EUR (€) - Euro</option>
+                      <option value="GBP">GBP (£) - British Pound</option>
+                      <option value="INR">INR (₹) - Indian Rupee</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Account Information Section */}
-                <div className="pt-6 border-t-2 border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                    <Shield className="h-6 w-6 mr-2 text-blue-600" />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    This information will appear on all your quotations and
+                    business documents.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save Company Settings
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Security Tab */}
+            {activeTab === "security" && (
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-purple-600" />
                     Account Security
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                      <span className="text-gray-700 flex items-center font-semibold">
-                        <CheckCircle className="h-5 w-5 mr-3 text-green-600" />
-                        Email Verified
-                      </span>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Email Verification
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Verify your email address to secure your account
+                        </p>
+                      </div>
                       <span
-                        className={`px-4 py-2 rounded-full text-xs font-bold ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           user.email_confirmed_at
-                            ? "bg-green-600 text-white"
-                            : "bg-yellow-100 text-yellow-700 border-2 border-yellow-300"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
-                        {user.email_confirmed_at ? "✓ VERIFIED" : "PENDING"}
+                        {user.email_confirmed_at ? "Verified" : "Pending"}
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
-                      <span className="text-gray-700 flex items-center font-semibold">
-                        <Key className="h-5 w-5 mr-3 text-blue-600" />
-                        Last Sign In
-                      </span>
-                      <span className="text-gray-900 font-bold text-sm">
+                    <div className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Last Sign In
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Your last login activity
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-900">
                         {user.last_sign_in_at
                           ? format(
                               new Date(user.last_sign_in_at),
-                              "MMM d, yyyy HH:mm"
+                              "MMM d, yyyy h:mm a",
                             )
                           : "Never"}
-                      </span>
+                      </p>
+                    </div>
+
+                    <div className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <p className="font-medium text-gray-900">Account ID</p>
+                        <p className="text-sm text-gray-500">
+                          Your unique account identifier
+                        </p>
+                      </div>
+                      <p className="text-sm font-mono text-gray-600">
+                        {user.id}
+                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Danger Zone */}
-        <div className="bg-white rounded-2xl shadow-xl border-2 border-red-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b-2 border-red-200">
-            <h3 className="text-xl font-bold text-red-600 flex items-center">
-              <AlertTriangle className="h-6 w-6 mr-2" />
-              Danger Zone
-            </h3>
-          </div>
-
-          <div className="p-6">
-            <div className="p-5 border-2 border-red-200 rounded-xl bg-gradient-to-br from-red-50 to-pink-50">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-                <div>
-                  <h4 className="font-bold text-gray-900 mb-1">
-                    Delete Account
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Permanently delete your account and all data. This action
-                    cannot be undone.
-                  </p>
+                {/* Danger Zone */}
+                <div className="border-2 border-red-200 rounded-lg overflow-hidden">
+                  <div className="bg-red-50 px-6 py-4 border-b border-red-200">
+                    <h3 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Danger Zone
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Delete Account
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Permanently delete your account and all associated
+                          data. This action cannot be undone.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to delete your account? This action cannot be undone.",
+                            )
+                          ) {
+                            alert(
+                              "Account deletion requires additional setup.",
+                            );
+                          }
+                        }}
+                        className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Sign Out Button */}
                 <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete your account? This action cannot be undone."
-                      )
-                    ) {
-                      alert(
-                        "Account deletion would be implemented here. This requires additional Supabase setup."
-                      );
-                    }
-                  }}
-                  className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all whitespace-nowrap"
+                  onClick={signOut}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
-                  Delete Account
+                  <LogOut className="h-5 w-5" />
+                  Sign Out
                 </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

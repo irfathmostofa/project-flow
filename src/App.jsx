@@ -130,7 +130,7 @@ function App() {
               }
             />
             <Route
-              path="/quotations"
+              path="/projects/:projectId/quotations"
               element={
                 <PrivateRoute>
                   <Layout>
@@ -140,7 +140,7 @@ function App() {
               }
             />
             <Route
-              path="/payments"
+              path="/projects/:projectId/payments"
               element={
                 <PrivateRoute>
                   <Layout>
@@ -150,7 +150,7 @@ function App() {
               }
             />
             <Route
-              path="/handovers"
+              path="/projects/:projectId/handovers"
               element={
                 <PrivateRoute>
                   <Layout>
@@ -160,7 +160,7 @@ function App() {
               }
             />
             <Route
-              path="/infrastructure-renewals"
+              path="/projects/:projectId/infrastructure"
               element={
                 <PrivateRoute>
                   <Layout>

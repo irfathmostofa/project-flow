@@ -1,5 +1,5 @@
 // components/payments/PaymentForm.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -10,13 +10,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-export default function PaymentForm({ projects, onSuccess }) {
+export default function PaymentForm({ projectId, projects, onSuccess }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    project_id: "",
+    project_id: projectId || "",
     amount: "",
     payment_date: new Date().toISOString().split("T")[0],
     payment_method: "bank_transfer",
@@ -24,6 +24,13 @@ export default function PaymentForm({ projects, onSuccess }) {
     reference_note: "",
     status: "completed",
   });
+
+  // Update project_id when projectId prop changes
+  useEffect(() => {
+    if (projectId) {
+      setFormData(prev => ({ ...prev, project_id: projectId }));
+    }
+  }, [projectId]);
 
   const paymentMethods = [
     { value: "cash", label: "Cash", icon: Banknote },
@@ -39,18 +46,25 @@ export default function PaymentForm({ projects, onSuccess }) {
 
     try {
       if (!formData.project_id) throw new Error("Please select a project");
-      if (!formData.amount || formData.amount <= 0)
+      if (!formData.amount || parseFloat(formData.amount) <= 0)
         throw new Error("Please enter a valid amount");
       if (!formData.payment_date) throw new Error("Please select payment date");
 
-      const { error: insertError } = await supabase.from("payments").insert([
-        {
-          ...formData,
-          amount: parseFloat(formData.amount),
-          received_by: user.id,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const paymentData = {
+        project_id: formData.project_id,
+        amount: parseFloat(formData.amount),
+        payment_date: formData.payment_date,
+        payment_method: formData.payment_method,
+        transaction_id: formData.transaction_id || null,
+        reference_note: formData.reference_note || null,
+        status: formData.status,
+        received_by: user.id,
+        created_at: new Date().toISOString(),
+      };
+
+      const { error: insertError } = await supabase
+        .from("payments")
+        .insert([paymentData]);
 
       if (insertError) throw insertError;
       onSuccess();
@@ -58,6 +72,18 @@ export default function PaymentForm({ projects, onSuccess }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Safely format number input
+  const handleAmountChange = (value) => {
+    if (value === "" || value === null) {
+      setFormData(prev => ({ ...prev, amount: "" }));
+      return;
+    }
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setFormData(prev => ({ ...prev, amount: value }));
     }
   };
 
@@ -70,27 +96,41 @@ export default function PaymentForm({ projects, onSuccess }) {
         </div>
       )}
 
-      {/* Project Selection */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Project *
-        </label>
-        <select
-          value={formData.project_id}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, project_id: e.target.value }))
-          }
-          required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Select a project</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Project Selection - only show if no projectId provided */}
+      {!projectId && projects && projects.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Project *
+          </label>
+          <select
+            value={formData.project_id}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, project_id: e.target.value }))
+            }
+            required
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Show selected project when projectId is provided */}
+      {projectId && projects && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Project
+          </label>
+          <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+            {projects.find(p => p.id === projectId)?.name || "Loading..."}
+          </div>
+        </div>
+      )}
 
       {/* Amount */}
       <div>
@@ -104,10 +144,9 @@ export default function PaymentForm({ projects, onSuccess }) {
           <input
             type="number"
             step="0.01"
+            min="0"
             value={formData.amount}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, amount: e.target.value }))
-            }
+            onChange={(e) => handleAmountChange(e.target.value)}
             required
             className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             placeholder="0.00"
@@ -215,20 +254,30 @@ export default function PaymentForm({ projects, onSuccess }) {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
         <button
           type="button"
           onClick={onSuccess}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          {loading ? "Recording..." : "Record Payment"}
+          {loading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Recording...
+            </>
+          ) : (
+            "Record Payment"
+          )}
         </button>
       </div>
     </form>

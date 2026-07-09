@@ -116,7 +116,7 @@ export default function TaskPage() {
 
         // Filter out duplicates
         const uniqueMemberProjects = (memberProjectDetails || []).filter(
-          (project) => !ownedProjects?.some((owned) => owned.id === project.id)
+          (project) => !ownedProjects?.some((owned) => owned.id === project.id),
         );
 
         allProjects = [...allProjects, ...uniqueMemberProjects];
@@ -152,7 +152,7 @@ export default function TaskPage() {
           milestone:milestones(name),
           feedback_by:users!feedback_by(id, full_name),
           project:projects!inner(id, name, owner_id)
-        `
+        `,
         )
         .eq("project_id", selectedProject);
 
@@ -174,7 +174,7 @@ export default function TaskPage() {
 
       if (filters.search) {
         query = query.or(
-          `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
+          `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
         );
       }
 
@@ -320,8 +320,8 @@ export default function TaskPage() {
 
       setTasks((prev) =>
         prev.map((task) =>
-          task.id === taskId ? { ...task, ...updates } : task
-        )
+          task.id === taskId ? { ...task, ...updates } : task,
+        ),
       );
     } catch (error) {
       console.error("Error updating task status:", error);
@@ -418,7 +418,7 @@ export default function TaskPage() {
       (t) =>
         t.deadline &&
         new Date(t.deadline) < new Date() &&
-        t.status !== "completed"
+        t.status !== "completed",
     ).length,
     inProgress: groupedTasks["in-progress"].length,
   };
@@ -454,7 +454,7 @@ export default function TaskPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-full mx-auto px-2 md:px-4 py-2 md:py-8">
+      <div className="max-w-full mx-auto px-2 md:px-4 py-2 md:py-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -832,7 +832,7 @@ export default function TaskPage() {
                             </div>
                           </div>
                         );
-                      }
+                      },
                     )}
                   </div>
                 )}
@@ -916,7 +916,7 @@ export default function TaskPage() {
                                 ))}
 
                                 {statusTasks.length === 0 && (
-                                  <div className="text-center py-8 text-gray-400 text-sm">
+                                  <div className="text-center py-4 text-gray-400 text-sm">
                                     <Circle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                     <p>No tasks</p>
                                   </div>
@@ -924,7 +924,7 @@ export default function TaskPage() {
                               </div>
                             </div>
                           );
-                        }
+                        },
                       )}
                     </div>
                   )}

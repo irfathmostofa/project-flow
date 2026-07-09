@@ -217,32 +217,32 @@ export default function ProjectDetail() {
 
             <div className="flex flex-wrap gap-3">
               <Link
-                to="/quotations"
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                to={`/projects/${project.id}/quotations`}
+                className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
               >
-                <FileText className="h-4 w-4" />
-                <span className="text-sm">Quotations</span>
+                <FileText className="h-5 w-5" />
+                Quotations
               </Link>
               <Link
-                to="/payments"
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                to={`/projects/${project.id}/payments`}
+                className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
               >
-                <CreditCard className="h-4 w-4" />
-                <span className="text-sm">Payments</span>
+                <CreditCard className="h-5 w-5" />
+                Payments
               </Link>
               <Link
-                to="/handovers"
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                to={`/projects/${project.id}/handovers`}
+                className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
               >
-                <FileCheck className="h-4 w-4" />
-                <span className="text-sm">Handovers</span>
+                <FileCheck className="h-5 w-5" />
+                Handovers
               </Link>
               <Link
-                to="/infrastructure-renewals"
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                to={`/projects/${project.id}/infrastructure`}
+                className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
               >
-                <Server className="h-4 w-4" />
-                <span className="text-sm">Infrastructure</span>
+                <Server className="h-5 w-5" />
+                Infrastructure
               </Link>
             </div>
           </div>

@@ -51,7 +51,7 @@ export default function TaskList({ projectId, milestoneId }) {
       milestone:milestones(name),
       suggestion_by:users!suggestion_by(id, full_name, email),
       feedback_by:users!feedback_by(id, full_name, email)
-    `
+    `,
       );
 
       // Filter by project if provided
@@ -142,8 +142,8 @@ export default function TaskList({ projectId, milestoneId }) {
       // Update local state
       setTasks((prev) =>
         prev.map((task) =>
-          task.id === taskId ? { ...task, ...updates } : task
-        )
+          task.id === taskId ? { ...task, ...updates } : task,
+        ),
       );
     } catch (error) {
       console.error("Error updating task status:", error);
@@ -172,7 +172,7 @@ export default function TaskList({ projectId, milestoneId }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] py-8 px-4">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] py-4 px-4">
         <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-blue-600 mb-3"></div>
         <p className="text-sm sm:text-base text-gray-600">Loading tasks...</p>
       </div>
@@ -186,7 +186,7 @@ export default function TaskList({ projectId, milestoneId }) {
     completed: tasks.filter((t) => t.status === "completed"),
   };
 
-   const statusConfig = {
+  const statusConfig = {
     todo: {
       title: "To Do",
       icon: Circle,
@@ -636,7 +636,7 @@ export default function TaskList({ projectId, milestoneId }) {
                     ))}
 
                     {statusTasks.length === 0 && (
-                      <div className="text-center py-8 text-gray-400 text-sm">
+                      <div className="text-center py-4 text-gray-400 text-sm">
                         <Circle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No tasks</p>
                       </div>
